@@ -1,7 +1,8 @@
+import { APPLICATION_ID, DISCORD_TOKEN } from '$env/static/private';
 import { startBot } from '$lib/bot';
 import { startSchedule } from '$lib/schedule';
 
-if (import.meta.env.VITE_DISCORD_TOKEN && import.meta.env.VITE_APPLICATION_ID) {
+if (DISCORD_TOKEN && APPLICATION_ID) {
 	const { bot } = startBot();
 	startSchedule(bot);
 }
