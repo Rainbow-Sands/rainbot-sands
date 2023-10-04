@@ -1,16 +1,16 @@
 import { Client, Events, GatewayIntentBits, REST, Routes, type Interaction } from 'discord.js';
 import { skip } from './server/commands/skip';
 import { current } from './server/commands/current';
-import { APPLICATION_ID, DISCORD_TOKEN } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 const commands = [current, skip];
 
 export const startBot = () => {
 	const bot = new Client({ intents: [GatewayIntentBits.Guilds] });
-	const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
+	const rest = new REST({ version: '10' }).setToken(env.DISCORD_TOKEN);
 
 	// Register commands
-	rest.put(Routes.applicationCommands(APPLICATION_ID), {
+	rest.put(Routes.applicationCommands(env.APPLICATION_ID), {
 		body: commands.map(({ name, description }) => ({ name, description }))
 	});
 
@@ -28,7 +28,7 @@ export const startBot = () => {
 		}
 	});
 
-	bot.login(DISCORD_TOKEN);
+	bot.login(env.DISCORD_TOKEN);
 
 	return { bot };
 };
