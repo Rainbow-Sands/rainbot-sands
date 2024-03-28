@@ -8,16 +8,18 @@ import {
 } from "discord.js";
 import { discSkip } from "./commands/skip";
 
-const commands = [discSkip];
+const commands = { skip: discSkip };
 
-export const startBot = () => {
-  const bot = new Client({ intents: [GatewayIntentBits.Guilds] });
-  const rest = new REST({ version: "10" }).setToken(Bun.env.DISCORD_TOKEN);
+export const registerCommands = async () => {
+  const rest = new REST().setToken(Bun.env.DISCORD_TOKEN);
 
-  // Register commands
-  rest.put(Routes.applicationCommands(Bun.env.DISCORD_APPLICATION_ID), {
-    body: commands.map(({ name, description }) => ({ name, description })),
+  await rest.put(Routes.applicationCommands(Bun.env.DISCORD_APPLICATION_ID), {
+    body: Object.values(commands).map(({ data }) => data.toJSON()),
   });
+};
+
+export const startBot = async () => {
+  const bot = new Client({ intents: [GatewayIntentBits.Guilds] });
 
   bot.once(Events.ClientReady, (c) => {
     console.log(`Discord bot ready. Logged in as ${c.user.tag}`);
@@ -27,10 +29,10 @@ export const startBot = () => {
     if (!interaction.isChatInputCommand()) {
       return;
     }
-    const command = commands.find(
-      ({ name }) => interaction.commandName === name
-    );
-    if (command) {
+
+    if (interaction.commandName in commands) {
+      const command =
+        commands[interaction.commandName as keyof typeof commands];
       await command.handler(interaction);
     }
   });
