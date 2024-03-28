@@ -14,18 +14,14 @@ db.exec(`
     );
   `);
 
-export const addRecapper = (id: string) => {
-  const maxPosition =
-    db
-      .prepare<
-        { max: number },
-        []
-      >("SELECT MAX(position) as max FROM recappers")
-      .get()?.max ?? 0;
-  db.run("INSERT INTO recappers (user_id, position) VALUES (?1, ?2)", [
-    id,
-    maxPosition + 1,
-  ]);
+export const replaceRecappers = (recappers: string[]): void => {
+  db.transaction(() => {
+    db.prepare("DELETE FROM recappers").run();
+    const stmt = db.prepare(
+      "INSERT INTO recappers (id, position) VALUES (?, ?)"
+    );
+    recappers.forEach((id, i) => stmt.run(id, i));
+  })();
 };
 
 export const getRecapper = () =>

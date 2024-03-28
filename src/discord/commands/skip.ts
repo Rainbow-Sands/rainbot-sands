@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, type CommandInteraction } from "discord.js";
 import { cycleRecapper, db, getRecapper } from "../../db";
 
-export const discSkip = {
+export const skip = {
   data: new SlashCommandBuilder()
     .setName("skip")
     .setDescription("Skip the current recapper"),

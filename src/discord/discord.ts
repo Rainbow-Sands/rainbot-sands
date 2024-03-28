@@ -6,9 +6,10 @@ import {
   Routes,
   type Interaction,
 } from "discord.js";
-import { discSkip } from "./commands/skip";
+import { skip } from "./commands/skip";
+import { replace } from "./commands/replace";
 
-const commands = { skip: discSkip };
+const commands = { skip, replace };
 
 export const registerCommands = async () => {
   const rest = new REST().setToken(Bun.env.DISCORD_TOKEN);
