@@ -1,9 +1,8 @@
-FROM oven/bun:1
+FROM oven/bun:latest
 
 COPY package.json ./
 COPY bun.lockb ./
 COPY src ./
 
-USER bun
 RUN bun install --production
 ENTRYPOINT [ "bun", "run", "index.ts" ]
