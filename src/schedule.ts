@@ -3,7 +3,7 @@ import type { Client, TextChannel } from "discord.js";
 import { cycleRecapper, getRecapper } from "./db";
 
 export const startSchedule = (bot: Client) => {
-  const rotateRecapperSchedule = new CronJob("1/5 * * * * *", async () => {
+  const rotateRecapperSchedule = new CronJob(Bun.env.SCHEDULE, async () => {
     const channel = await bot.channels.fetch(Bun.env.DISCORD_CHANNEL_ID);
     if (!channel?.isTextBased) {
       return;
