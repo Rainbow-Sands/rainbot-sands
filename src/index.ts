@@ -1,7 +1,5 @@
-import { Elysia } from "elysia";
+import { startBot } from "./discord/discord";
+import { startSchedule } from "./schedule";
 
-const app = new Elysia().get("/", () => "Hello Elysia").listen(3000);
-
-console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
-);
+const { bot } = startBot();
+startSchedule(bot);
