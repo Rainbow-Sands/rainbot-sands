@@ -9,15 +9,16 @@ export const startSchedule = (bot: Client) => {
       return;
     }
     const recappingUser = getRecapper();
+    cycleRecapper();
+    const nextRecappingUser = getRecapper();
     const textChannel = channel as TextChannel;
-    if (!recappingUser) {
+    if (!recappingUser || !nextRecappingUser) {
       textChannel.send("There are no recappers.");
       return;
     }
     textChannel.send(
-      `Session starts in 1 hour (unless rescheduled). Recapper is <@${recappingUser.id}>`
+      `Session starts in 1 hour (unless rescheduled). Recapper is <@${recappingUser.id}>. Next recapper is <@${nextRecappingUser.id}>.`,
     );
-    cycleRecapper();
   });
   rotateRecapperSchedule.start();
 };
