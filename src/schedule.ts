@@ -23,14 +23,19 @@ export const startSchedule = (bot: Client) => {
 
   const announceQuests = new CronJob(Bun.env.QUEST_SCHEDULE, async () => {
     const quests = getQuests();
-    let questText : string = "The next session is scheduled for <some_time>. Here are some highlights from last session: Here are your pending quests:";
-    if (quests)
+    const channel = await bot.channels.fetch(Bun.env.DISCORD_CHANNEL_ID);
+    const textChannel = channel as TextChannel;
+    let questText : string = "The next session is coming up! Here are your pending quests:";
+    if (quests && quests.length > 0)
       {
-        quests.forEach(quest => {
-          questText += "* " + quest.name + quest.description;
+        quests.forEach((quest, index) => {
+          questText += `\r\n${index}. **${quest.name}**: ${quest.description}`;
         });
+        textChannel.send(
+          questText,
+        );
       }
-
+      
   });
 
   rotateRecapperSchedule.start();

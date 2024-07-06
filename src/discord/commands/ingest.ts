@@ -1,9 +1,9 @@
 import { SlashCommandBuilder, type CommandInteraction } from "discord.js";
-import { replaceQuests, db, Quest } from "../../db";
+import { replaceQuests, db, Quest, getQuests } from "../../db";
 
-export const skip = {
+export const quests = {
   data: new SlashCommandBuilder()
-    .setName("ingest")
+    .setName("quests")
     .setDescription("Ingest a JSON document containing a list of quests")
     .addStringOption(
         option => option
@@ -14,9 +14,10 @@ export const skip = {
   handler: async (interaction: CommandInteraction) => {
     db.transaction(async () => {
 
-      let data = interaction.options.get('json')?.value;
+      let data = interaction.options.get('quests')?.value;
       if (!data || typeof(data) !== "string")
       {
+        console.log(`${data}`);
         await interaction.reply("You must provide some quests.");
         return;
       }

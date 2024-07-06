@@ -8,8 +8,9 @@ import {
 } from "discord.js";
 import { skip } from "./commands/skip";
 import { replace } from "./commands/replace";
+import { quests } from "./commands/ingest"
 
-const commands = { skip, replace };
+const commands = { skip, replace, quests };
 
 export const registerCommands = async () => {
   const rest = new REST().setToken(Bun.env.DISCORD_TOKEN);
