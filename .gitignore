@@ -1,4 +1,6 @@
 /node_modules
 /db.sqlite
+/media
 /.env
 /.vscode
+.DS_Store

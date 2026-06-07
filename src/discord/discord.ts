@@ -8,9 +8,11 @@ import {
 } from "discord.js";
 import { skip } from "./commands/skip";
 import { replace } from "./commands/replace";
-import { quests } from "./commands/ingest"
+import { quests } from "./commands/ingest";
+import { start } from "./commands/start";
+import { end } from "./commands/end";
 
-const commands = { skip, replace, quests };
+const commands = { skip, replace, quests, start, end };
 
 export const registerCommands = async () => {
   const rest = new REST().setToken(Bun.env.DISCORD_TOKEN);
@@ -21,7 +23,9 @@ export const registerCommands = async () => {
 };
 
 export const startBot = async () => {
-  const bot = new Client({ intents: [GatewayIntentBits.Guilds] });
+  const bot = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
+  });
 
   bot.once(Events.ClientReady, (c) => {
     console.log(`Discord bot ready. Logged in as ${c.user.tag}`);
