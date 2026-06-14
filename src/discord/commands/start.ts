@@ -1,18 +1,10 @@
-import {
-  SlashCommandBuilder,
-  type CommandInteraction,
-  type VoiceBasedChannel,
-} from "discord.js";
+import { SlashCommandBuilder, type CommandInteraction, type VoiceBasedChannel } from "discord.js";
 import { joinVoiceChannel, EndBehaviorType } from "@discordjs/voice";
 import prism from "prism-media";
 import { mkdirSync, writeFileSync } from "fs";
 import { spawn } from "child_process";
 import path from "path";
-import {
-  activeSession,
-  setActiveSession,
-  type RecordingSession,
-} from "../recording";
+import { activeSession, setActiveSession, type RecordingSession } from "../recording";
 import { enqueueActivation } from "../../transcribe";
 
 const SAMPLE_RATE = 48000;
@@ -51,15 +43,22 @@ function startActivation(session: RecordingSession, userId: string): void {
   });
 
   const ffmpegProcess = spawn("ffmpeg", [
-    "-f", "s16le", "-ar", String(SAMPLE_RATE), "-ac", String(CHANNELS),
-    "-i", "pipe:0",
-    "-c:a", "libopus", "-b:a", "64k",
+    "-f",
+    "s16le",
+    "-ar",
+    String(SAMPLE_RATE),
+    "-ac",
+    String(CHANNELS),
+    "-i",
+    "pipe:0",
+    "-c:a",
+    "libopus",
+    "-b:a",
+    "64k",
     outputPath,
   ]);
 
-  ffmpegProcess.on("error", (err) =>
-    console.error(`ffmpeg error (${userId}):`, err),
-  );
+  ffmpegProcess.on("error", (err) => console.error(`ffmpeg error (${userId}):`, err));
 
   audioStream.pipe(opusDecoder as any);
   opusDecoder.pipe(ffmpegProcess.stdin! as any);
@@ -81,9 +80,7 @@ export const start = {
     .setDescription("Join your voice channel and start recording"),
   handler: async (interaction: CommandInteraction) => {
     if (activeSession) {
-      await interaction.reply(
-        "A recording is already in progress. Use `/stop` to stop it first.",
-      );
+      await interaction.reply("A recording is already in progress. Use `/stop` to stop it first.");
       return;
     }
 
@@ -94,34 +91,24 @@ export const start = {
 
     const guild = interaction.guild;
     if (!guild) {
-      await interaction.reply(
-        "This command can only be used in a server the bot has joined.",
-      );
+      await interaction.reply("This command can only be used in a server the bot has joined.");
       return;
     }
 
-    const voiceChannelId = guild.voiceStates.cache.get(
-      interaction.user.id,
-    )?.channelId;
+    const voiceChannelId = guild.voiceStates.cache.get(interaction.user.id)?.channelId;
     if (!voiceChannelId) {
-      await interaction.reply(
-        "You must be in a voice channel to use this command.",
-      );
+      await interaction.reply("You must be in a voice channel to use this command.");
       return;
     }
 
-    const voiceChannel = guild.channels.cache.get(
-      voiceChannelId,
-    ) as VoiceBasedChannel | null;
+    const voiceChannel = guild.channels.cache.get(voiceChannelId) as VoiceBasedChannel | null;
     if (!voiceChannel) {
       await interaction.reply("Could not resolve the voice channel.");
       return;
     }
 
     if (!Bun.env.MEDIA_PATH) {
-      await interaction.reply(
-        "MEDIA_PATH environment variable is not configured.",
-      );
+      await interaction.reply("MEDIA_PATH environment variable is not configured.");
       return;
     }
 

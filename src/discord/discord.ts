@@ -1,11 +1,4 @@
-import {
-  Client,
-  Events,
-  GatewayIntentBits,
-  REST,
-  Routes,
-  type Interaction,
-} from "discord.js";
+import { Client, Events, GatewayIntentBits, REST, Routes, type Interaction } from "discord.js";
 import { skip } from "./commands/skip";
 import { replace } from "./commands/replace";
 import { quests } from "./commands/ingest";
@@ -37,8 +30,7 @@ export const startBot = async () => {
     }
 
     if (interaction.commandName in commands) {
-      const command =
-        commands[interaction.commandName as keyof typeof commands];
+      const command = commands[interaction.commandName as keyof typeof commands];
       await command.handler(interaction);
     }
   });

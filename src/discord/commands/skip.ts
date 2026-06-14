@@ -2,9 +2,7 @@ import { SlashCommandBuilder, type CommandInteraction } from "discord.js";
 import { cycleRecapper, db, getRecapper } from "../../db";
 
 export const skip = {
-  data: new SlashCommandBuilder()
-    .setName("skip")
-    .setDescription("Skip the current recapper"),
+  data: new SlashCommandBuilder().setName("skip").setDescription("Skip the current recapper"),
   handler: async (interaction: CommandInteraction) => {
     db.transaction(async () => {
       const skippedRecapper = getRecapper();
@@ -19,7 +17,7 @@ export const skip = {
         return;
       }
       await interaction.reply(
-        `<@${skippedRecapper.id}> has been skipped. Current recapper is <@${recapper.id}>`
+        `<@${skippedRecapper.id}> has been skipped. Current recapper is <@${recapper.id}>`,
       );
     })();
   },

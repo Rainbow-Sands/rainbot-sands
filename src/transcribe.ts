@@ -23,10 +23,7 @@ interface WhisperResponse {
 // threshold are dropped to prevent hallucinations on noise/brief activations.
 const NO_SPEECH_THRESHOLD = 0.6;
 
-async function transcribeFile(
-  audioPath: string,
-  whisperUrl: string
-): Promise<string | null> {
+async function transcribeFile(audioPath: string, whisperUrl: string): Promise<string | null> {
   const form = new FormData();
   form.append("file", Bun.file(audioPath), path.basename(audioPath));
   form.append("response_format", "verbose_json");
@@ -40,9 +37,8 @@ async function transcribeFile(
 
   const result = (await res.json()) as WhisperResponse;
 
-  const noSpeechProb = result.segments.length > 0
-    ? Math.max(...result.segments.map((s) => s.no_speech_prob))
-    : 1;
+  const noSpeechProb =
+    result.segments.length > 0 ? Math.max(...result.segments.map((s) => s.no_speech_prob)) : 1;
 
   if (noSpeechProb > NO_SPEECH_THRESHOLD) {
     console.log(`[transcribe] skipping ${audioPath} (no_speech_prob=${noSpeechProb.toFixed(2)})`);
@@ -54,9 +50,7 @@ async function transcribeFile(
 
 function writeTranscript(sessionDir: string): void {
   const lines = sessionLines.get(sessionDir) ?? [];
-  const sorted = [...lines].sort((a, b) =>
-    a.timestamp.localeCompare(b.timestamp)
-  );
+  const sorted = [...lines].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
   const content =
     sorted
       .map(({ timestamp, userId, text }) => {
@@ -80,10 +74,7 @@ async function drainQueue(): Promise<void> {
 
     console.log(`[transcribe] processing ${activation.file}`);
     try {
-      const text = await transcribeFile(
-        path.join(sessionDir, activation.file),
-        whisperUrl
-      );
+      const text = await transcribeFile(path.join(sessionDir, activation.file), whisperUrl);
       if (text) {
         if (!sessionLines.has(sessionDir)) sessionLines.set(sessionDir, []);
         sessionLines.get(sessionDir)!.push({
@@ -101,10 +92,7 @@ async function drainQueue(): Promise<void> {
   processing = false;
 }
 
-export function enqueueActivation(
-  activation: Activation,
-  sessionDir: string
-): void {
+export function enqueueActivation(activation: Activation, sessionDir: string): void {
   if (!Bun.env.WHISPER_URL) return;
   queue.push({ activation, sessionDir });
   drainQueue().catch((err) => console.error("[transcribe] queue error:", err));

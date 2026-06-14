@@ -21,7 +21,7 @@ export const stop = {
     setActiveSession(null);
 
     await interaction.reply(
-      `Recording stopped. ${activations.length} voice activation(s) recorded. Transcript is being written to \`${sessionDir}/transcript.txt\`.`
+      `Recording stopped. ${activations.length} voice activation(s) recorded. Transcript is being written to \`${sessionDir}/transcript.txt\`.`,
     );
   },
 };

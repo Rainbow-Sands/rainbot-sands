@@ -25,17 +25,13 @@ export const startSchedule = (bot: Client) => {
     const quests = getQuests();
     const channel = await bot.channels.fetch(Bun.env.DISCORD_CHANNEL_ID);
     const textChannel = channel as TextChannel;
-    let questText : string = "The next session is coming up! Here are your pending quests:";
-    if (quests && quests.length > 0)
-      {
-        quests.forEach((quest, index) => {
-          questText += `\r\n${index}. **${quest.name}**: ${quest.description}`;
-        });
-        textChannel.send(
-          questText,
-        );
-      }
-      
+    let questText: string = "The next session is coming up! Here are your pending quests:";
+    if (quests && quests.length > 0) {
+      quests.forEach((quest, index) => {
+        questText += `\r\n${index}. **${quest.name}**: ${quest.description}`;
+      });
+      textChannel.send(questText);
+    }
   });
 
   rotateRecapperSchedule.start();
