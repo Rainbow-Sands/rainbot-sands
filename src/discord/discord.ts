@@ -10,9 +10,9 @@ import { skip } from "./commands/skip";
 import { replace } from "./commands/replace";
 import { quests } from "./commands/ingest";
 import { start } from "./commands/start";
-import { end } from "./commands/end";
+import { stop } from "./commands/stop";
 
-const commands = { skip, replace, quests, start, end };
+const commands = { skip, replace, quests, start, stop };
 
 export const registerCommands = async () => {
   const rest = new REST().setToken(Bun.env.DISCORD_TOKEN);

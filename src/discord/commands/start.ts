@@ -5,15 +5,15 @@ import {
 } from "discord.js";
 import { joinVoiceChannel, EndBehaviorType } from "@discordjs/voice";
 import prism from "prism-media";
-import { createWriteStream, mkdirSync } from "fs";
+import { spawn } from "child_process";
+import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import {
   activeSession,
   setActiveSession,
   type RecordingSession,
 } from "../recording";
-
-const CHUNK_INTERVAL_MS = 60000;
+import { enqueueActivation } from "../../transcribe";
 
 function sessionDirName(): string {
   const now = new Date();
@@ -21,18 +21,24 @@ function sessionDirName(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}-${pad(now.getMinutes())}`;
 }
 
-function chunkPath(sessionDir: string, userId: string, index: number): string {
-  return path.join(
-    sessionDir,
-    `${userId}_${String(index).padStart(4, "0")}.pcm`,
+function saveMetadata(session: RecordingSession): void {
+  writeFileSync(
+    path.join(session.sessionDir, "metadata.json"),
+    JSON.stringify(session.activations, null, 2),
   );
 }
 
-function startUserRecording(session: RecordingSession, userId: string): void {
-  if (session.userRecordings.has(userId)) return;
+function startActivation(session: RecordingSession, userId: string): void {
+  if (session.activeUsers.has(userId)) return;
+
+  const timestamp = new Date().toISOString();
+  const filename = `${userId}_${String(session.activationCount).padStart(4, "0")}.ogg`;
+  const outputPath = path.join(session.sessionDir, filename);
+  session.activationCount++;
+  session.activeUsers.add(userId);
 
   const audioStream = session.connection.receiver.subscribe(userId, {
-    end: { behavior: EndBehaviorType.Manual },
+    end: { behavior: EndBehaviorType.AfterSilence, duration: 2000 },
   });
 
   const opusDecoder = new prism.opus.Decoder({
@@ -41,34 +47,39 @@ function startUserRecording(session: RecordingSession, userId: string): void {
     frameSize: 960,
   });
 
-  const firstPath = chunkPath(session.sessionDir, userId, 0);
-  const fileStream = createWriteStream(firstPath);
+  const ffmpegProcess = spawn("ffmpeg", [
+    "-f",
+    "s16le",
+    "-ar",
+    "48000",
+    "-ac",
+    "2",
+    "-i",
+    "pipe:0",
+    "-codec:a",
+    "libopus",
+    "-b:a",
+    "64k",
+    outputPath,
+  ]);
 
-  audioStream.pipe(opusDecoder);
-  opusDecoder.pipe(fileStream);
+  ffmpegProcess.on("error", (err) =>
+    console.error(`ffmpeg error (${userId}):`, err),
+  );
 
-  session.userRecordings.set(userId, {
-    audioStream,
-    opusDecoder,
-    currentStream: fileStream,
-    chunkPaths: [firstPath],
+  // AudioReceiveStream.pipe() is typed for Web Streams API; cast to bypass
+  audioStream.pipe(opusDecoder as any);
+  opusDecoder.pipe(ffmpegProcess.stdin! as any);
+
+  ffmpegProcess.on("close", (code) => {
+    session.activeUsers.delete(userId);
+    if (code === 0) {
+      const activation = { file: filename, timestamp, userId };
+      session.activations.push(activation);
+      saveMetadata(session);
+      enqueueActivation(activation, session.sessionDir);
+    }
   });
-}
-
-function rotateChunks(session: RecordingSession): void {
-  for (const [userId, recording] of session.userRecordings) {
-    const { opusDecoder, currentStream, chunkPaths } = recording;
-
-    opusDecoder.unpipe(currentStream);
-    currentStream.end();
-
-    const nextPath = chunkPath(session.sessionDir, userId, chunkPaths.length);
-    const nextStream = createWriteStream(nextPath);
-    opusDecoder.pipe(nextStream);
-
-    recording.currentStream = nextStream;
-    chunkPaths.push(nextPath);
-  }
 }
 
 export const start = {
@@ -127,23 +138,22 @@ export const start = {
     const connection = joinVoiceChannel({
       channelId: voiceChannel.id,
       guildId: voiceChannel.guild.id,
-      adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      adapterCreator: voiceChannel.guild.voiceAdapterCreator as any,
       selfDeaf: false,
     });
 
     const session: RecordingSession = {
       connection,
       sessionDir,
-      userRecordings: new Map(),
-      chunkInterval: setInterval(
-        () => rotateChunks(session),
-        CHUNK_INTERVAL_MS,
-      ),
+      activations: [],
+      activationCount: 0,
+      activeUsers: new Set(),
     };
     setActiveSession(session);
 
     connection.receiver.speaking.on("start", (userId: string) => {
-      startUserRecording(session, userId);
+      startActivation(session, userId);
     });
 
     await interaction.reply(

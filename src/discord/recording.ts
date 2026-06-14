@@ -1,19 +1,17 @@
-import type { VoiceConnection, AudioReceiveStream } from "@discordjs/voice";
-import type { WriteStream } from "fs";
-import type { Transform } from "stream";
+import type { VoiceConnection } from "@discordjs/voice";
 
-export interface UserRecording {
-  audioStream: AudioReceiveStream;
-  opusDecoder: Transform;
-  currentStream: WriteStream;
-  chunkPaths: string[];
+export interface Activation {
+  file: string;
+  timestamp: string;
+  userId: string;
 }
 
 export interface RecordingSession {
   connection: VoiceConnection;
   sessionDir: string;
-  userRecordings: Map<string, UserRecording>;
-  chunkInterval: ReturnType<typeof setInterval>;
+  activations: Activation[];
+  activationCount: number;
+  activeUsers: Set<string>;
 }
 
 export let activeSession: RecordingSession | null = null;
