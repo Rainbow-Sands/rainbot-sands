@@ -5,8 +5,8 @@ import {
 } from "discord.js";
 import { joinVoiceChannel, EndBehaviorType } from "@discordjs/voice";
 import prism from "prism-media";
-import { spawn } from "child_process";
 import { mkdirSync, writeFileSync } from "fs";
+import { spawn } from "child_process";
 import path from "path";
 import {
   activeSession,
@@ -14,6 +14,9 @@ import {
   type RecordingSession,
 } from "../recording";
 import { enqueueActivation } from "../../transcribe";
+
+const SAMPLE_RATE = 48000;
+const CHANNELS = 2;
 
 function sessionDirName(): string {
   const now = new Date();
@@ -42,24 +45,15 @@ function startActivation(session: RecordingSession, userId: string): void {
   });
 
   const opusDecoder = new prism.opus.Decoder({
-    rate: 48000,
-    channels: 2,
+    rate: SAMPLE_RATE,
+    channels: CHANNELS,
     frameSize: 960,
   });
 
   const ffmpegProcess = spawn("ffmpeg", [
-    "-f",
-    "s16le",
-    "-ar",
-    "48000",
-    "-ac",
-    "2",
-    "-i",
-    "pipe:0",
-    "-codec:a",
-    "libopus",
-    "-b:a",
-    "64k",
+    "-f", "s16le", "-ar", String(SAMPLE_RATE), "-ac", String(CHANNELS),
+    "-i", "pipe:0",
+    "-c:a", "libopus", "-b:a", "64k",
     outputPath,
   ]);
 
@@ -67,7 +61,6 @@ function startActivation(session: RecordingSession, userId: string): void {
     console.error(`ffmpeg error (${userId}):`, err),
   );
 
-  // AudioReceiveStream.pipe() is typed for Web Streams API; cast to bypass
   audioStream.pipe(opusDecoder as any);
   opusDecoder.pipe(ffmpegProcess.stdin! as any);
 
@@ -89,7 +82,7 @@ export const start = {
   handler: async (interaction: CommandInteraction) => {
     if (activeSession) {
       await interaction.reply(
-        "A recording is already in progress. Use `/end` to stop it first.",
+        "A recording is already in progress. Use `/stop` to stop it first.",
       );
       return;
     }
