@@ -1,11 +1,23 @@
-import { SlashCommandBuilder, type CommandInteraction, type VoiceBasedChannel } from "discord.js";
+import {
+  SlashCommandBuilder,
+  type CommandInteraction,
+  type VoiceBasedChannel,
+} from "discord.js";
 import { joinVoiceChannel, EndBehaviorType } from "@discordjs/voice";
 import prism from "prism-media";
 import { mkdirSync, writeFileSync } from "fs";
 import { spawn } from "child_process";
 import path from "path";
-import { activeSession, setActiveSession, type RecordingSession } from "../recording";
-import { enqueueActivation } from "../../transcribe";
+import {
+  activeSession,
+  setActiveSession,
+  type RecordingSession,
+} from "../recording.ts";
+import { getTemporalClient } from "../../temporal.ts";
+import {
+  sessionWorkflow,
+  newActivationSignal,
+} from "../../workflows/session.ts";
 
 const SAMPLE_RATE = 48000;
 const CHANNELS = 2;
@@ -58,7 +70,9 @@ function startActivation(session: RecordingSession, userId: string): void {
     outputPath,
   ]);
 
-  ffmpegProcess.on("error", (err) => console.error(`ffmpeg error (${userId}):`, err));
+  ffmpegProcess.on("error", (err) =>
+    console.error(`ffmpeg error (${userId}):`, err),
+  );
 
   audioStream.pipe(opusDecoder as any);
   opusDecoder.pipe(ffmpegProcess.stdin! as any);
@@ -69,7 +83,11 @@ function startActivation(session: RecordingSession, userId: string): void {
       const activation = { file: filename, timestamp, userId };
       session.activations.push(activation);
       saveMetadata(session);
-      enqueueActivation(activation, session.sessionDir);
+      session.workflowHandle
+        .signal(newActivationSignal, activation)
+        .catch((err: unknown) =>
+          console.error("[workflow] signal error:", err),
+        );
     }
   });
 }
@@ -80,7 +98,9 @@ export const start = {
     .setDescription("Join your voice channel and start recording"),
   handler: async (interaction: CommandInteraction) => {
     if (activeSession) {
-      await interaction.reply("A recording is already in progress. Use `/stop` to stop it first.");
+      await interaction.reply(
+        "A recording is already in progress. Use `/stop` to stop it first.",
+      );
       return;
     }
 
@@ -91,36 +111,52 @@ export const start = {
 
     const guild = interaction.guild;
     if (!guild) {
-      await interaction.reply("This command can only be used in a server the bot has joined.");
+      await interaction.reply(
+        "This command can only be used in a server the bot has joined.",
+      );
       return;
     }
 
-    const voiceChannelId = guild.voiceStates.cache.get(interaction.user.id)?.channelId;
+    const voiceChannelId = guild.voiceStates.cache.get(
+      interaction.user.id,
+    )?.channelId;
     if (!voiceChannelId) {
-      await interaction.reply("You must be in a voice channel to use this command.");
+      await interaction.reply(
+        "You must be in a voice channel to use this command.",
+      );
       return;
     }
 
-    const voiceChannel = guild.channels.cache.get(voiceChannelId) as VoiceBasedChannel | null;
+    const voiceChannel = guild.channels.cache.get(
+      voiceChannelId,
+    ) as VoiceBasedChannel | null;
     if (!voiceChannel) {
       await interaction.reply("Could not resolve the voice channel.");
       return;
     }
 
-    if (!Bun.env.MEDIA_PATH) {
-      await interaction.reply("MEDIA_PATH environment variable is not configured.");
+    if (!process.env.MEDIA_PATH) {
+      await interaction.reply(
+        "MEDIA_PATH environment variable is not configured.",
+      );
       return;
     }
 
-    const sessionDir = path.join(Bun.env.MEDIA_PATH, sessionDirName());
+    const sessionDir = path.join(process.env.MEDIA_PATH, sessionDirName());
     mkdirSync(sessionDir, { recursive: true });
 
     const connection = joinVoiceChannel({
       channelId: voiceChannel.id,
       guildId: voiceChannel.guild.id,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       adapterCreator: voiceChannel.guild.voiceAdapterCreator as any,
       selfDeaf: false,
+    });
+
+    const client = await getTemporalClient();
+    const workflowHandle = await client.workflow.start(sessionWorkflow, {
+      taskQueue: "rainbot",
+      workflowId: `session-${Date.now()}`,
+      args: [sessionDir],
     });
 
     const session: RecordingSession = {
@@ -129,6 +165,7 @@ export const start = {
       activations: [],
       activationCount: 0,
       activeUsers: new Set(),
+      workflowHandle,
     };
     setActiveSession(session);
 

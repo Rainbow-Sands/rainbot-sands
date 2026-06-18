@@ -1,18 +1,25 @@
-import { Client, Events, GatewayIntentBits, REST, Routes, type Interaction } from "discord.js";
-import { skip } from "./commands/skip";
-import { replace } from "./commands/replace";
-import { quests } from "./commands/ingest";
-import { start } from "./commands/start";
-import { stop } from "./commands/stop";
+import {
+  Client,
+  Events,
+  GatewayIntentBits,
+  REST,
+  Routes,
+  type Interaction,
+} from "discord.js";
+import { start } from "./commands/start.ts";
+import { stop } from "./commands/stop.ts";
 
-const commands = { skip, replace, quests, start, stop };
+const commands = { start, stop };
 
 export const registerCommands = async () => {
-  const rest = new REST().setToken(Bun.env.DISCORD_TOKEN);
+  const rest = new REST().setToken(process.env.DISCORD_TOKEN!);
 
-  await rest.put(Routes.applicationCommands(Bun.env.DISCORD_APPLICATION_ID), {
-    body: Object.values(commands).map(({ data }) => data.toJSON()),
-  });
+  await rest.put(
+    Routes.applicationCommands(process.env.DISCORD_APPLICATION_ID!),
+    {
+      body: Object.values(commands).map(({ data }) => data.toJSON()),
+    },
+  );
 };
 
 export const startBot = async () => {
@@ -30,12 +37,13 @@ export const startBot = async () => {
     }
 
     if (interaction.commandName in commands) {
-      const command = commands[interaction.commandName as keyof typeof commands];
+      const command =
+        commands[interaction.commandName as keyof typeof commands];
       await command.handler(interaction);
     }
   });
 
-  bot.login(Bun.env.DISCORD_TOKEN);
+  bot.login(process.env.DISCORD_TOKEN!);
 
   return { bot };
 };

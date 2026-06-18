@@ -1,10 +1,12 @@
-FROM oven/bun:latest
+FROM node:20
 
 RUN apt-get update && apt-get install -y ffmpeg
 
-COPY package.json ./
-COPY bun.lockb ./
-COPY src ./
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --production
 
-RUN bun install --production
-ENTRYPOINT [ "bun", "run", "index.ts" ]
+COPY tsconfig.json ./
+COPY src ./src
+
+ENTRYPOINT ["node", "src/index.ts"]
