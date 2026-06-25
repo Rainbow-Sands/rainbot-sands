@@ -5,15 +5,18 @@
   "scripts": {
     "dev": "node --env-file=.env --watch src/index.ts",
     "worker": "node --env-file=.env src/worker.ts",
-    "format": "prettier --write ."
+    "format": "oxfmt",
+    "format:fix": "oxfmt --write",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix"
   },
   "dependencies": {
     "@discordjs/voice": "^0.19.2",
     "@temporalio/activity": "^1.18.1",
     "@temporalio/client": "^1.18.1",
+    "@temporalio/envconfig": "^1.18.1",
     "@temporalio/worker": "^1.18.1",
     "@temporalio/workflow": "^1.18.1",
-    "@temporalio/envconfig": "^1.18.1",
     "discord.js": "^14.26.4",
     "opusscript": "^0.0.8",
     "oxfmt": "^0.55.0",

@@ -10,9 +10,7 @@ import {
 import type * as activities from "../activities/transcribe.ts";
 import type { SegmentRef, SessionInput, SessionStatus } from "../../types.ts";
 
-const { transcribeSegment, aggregateTranscript } = proxyActivities<
-  typeof activities
->({
+const { transcribeSegment, aggregateTranscript } = proxyActivities<typeof activities>({
   taskQueue: "rainbot-transcription",
   startToCloseTimeout: "15 minutes",
   scheduleToCloseTimeout: "1 hour",
@@ -46,7 +44,7 @@ interface SessionContinuation {
 
 export async function sessionWorkflow(
   input: SessionInput,
-  continuation?: SessionContinuation
+  continuation?: SessionContinuation,
 ): Promise<void> {
   const carriedOverKeys: string[] = continuation?.carriedOverKeys ?? [];
   const pending: Promise<string | null>[] = [];
@@ -74,7 +72,7 @@ export async function sessionWorkflow(
         .catch((err: unknown) => {
           lastError = err instanceof Error ? err.message : String(err);
           return null;
-        })
+        }),
     );
     upsertSearchAttributes({ SegmentCount: [segmentCount] });
   });
@@ -89,10 +87,7 @@ export async function sessionWorkflow(
   let lastSegmentCount = 0;
   while (!ended) {
     lastSegmentCount = segmentCount;
-    const hadActivity = await condition(
-      () => segmentCount > lastSegmentCount || ended,
-      "1 hour"
-    );
+    const hadActivity = await condition(() => segmentCount > lastSegmentCount || ended, "1 hour");
     if (!hadActivity) {
       ended = true; // idle timeout
     }

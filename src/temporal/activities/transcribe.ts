@@ -27,9 +27,7 @@ export async function transcribeSegment(
 
   const audioPath = path.join(sessionDir, ref.audioFile);
   if (!existsSync(audioPath)) {
-    throw ApplicationFailure.nonRetryable(
-      `Audio file not found: ${ref.audioFile}`,
-    );
+    throw ApplicationFailure.nonRetryable(`Audio file not found: ${ref.audioFile}`);
   }
 
   const abortController = new AbortController();
@@ -55,18 +53,14 @@ export async function transcribeSegment(
     });
 
     if (res.status >= 400 && res.status < 500) {
-      throw ApplicationFailure.nonRetryable(
-        `Whisper rejected the request: ${res.status}`,
-      );
+      throw ApplicationFailure.nonRetryable(`Whisper rejected the request: ${res.status}`);
     }
     if (!res.ok) throw new Error(`Whisper server returned ${res.status}`);
 
     const result = (await res.json()) as WhisperResponse;
 
     const noSpeechProb =
-      result.segments.length > 0
-        ? Math.max(...result.segments.map((s) => s.no_speech_prob))
-        : 1;
+      result.segments.length > 0 ? Math.max(...result.segments.map((s) => s.no_speech_prob)) : 1;
 
     if (noSpeechProb > NO_SPEECH_THRESHOLD) {
       console.log(
@@ -97,10 +91,7 @@ export async function transcribeSegment(
 
 // ── Aggregation ───────────────────────────────────────────────────────────────
 
-export async function aggregateTranscript(
-  sessionDir: string,
-  keys: string[],
-): Promise<string> {
+export async function aggregateTranscript(sessionDir: string, keys: string[]): Promise<string> {
   const fragments: TranscriptFragment[] = keys
     .map((key) => {
       const p = path.join(sessionDir, key);
@@ -108,7 +99,7 @@ export async function aggregateTranscript(
       return JSON.parse(readFileSync(p, "utf8")) as TranscriptFragment;
     })
     .filter((f): f is TranscriptFragment => f !== null)
-    .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+    .toSorted((a, b) => a.timestamp.localeCompare(b.timestamp));
 
   const content =
     fragments
@@ -151,9 +142,7 @@ async function llamaComplete(prompt: string, system: string): Promise<string> {
     });
 
     if (res.status >= 400 && res.status < 500) {
-      throw ApplicationFailure.nonRetryable(
-        `LLaMA rejected the request: ${res.status}`,
-      );
+      throw ApplicationFailure.nonRetryable(`LLaMA rejected the request: ${res.status}`);
     }
     if (!res.ok) throw new Error(`LLaMA server returned ${res.status}`);
 
@@ -166,10 +155,7 @@ async function llamaComplete(prompt: string, system: string): Promise<string> {
   }
 }
 
-export async function summarize(
-  sessionDir: string,
-  transcriptKey: string,
-): Promise<string> {
+export async function summarize(sessionDir: string, transcriptKey: string): Promise<string> {
   const transcript = readFileSync(path.join(sessionDir, transcriptKey), "utf8");
 
   const text = await llamaComplete(
@@ -182,10 +168,7 @@ export async function summarize(
   return "summary.txt";
 }
 
-export async function recap(
-  sessionDir: string,
-  summaryKey: string,
-): Promise<string> {
+export async function recap(sessionDir: string, summaryKey: string): Promise<string> {
   const summary = readFileSync(path.join(sessionDir, summaryKey), "utf8");
 
   const text = await llamaComplete(

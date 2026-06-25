@@ -1,7 +1,7 @@
 export interface SegmentRef {
   segmentId: string;
-  audioFile: string;  // relative to sessionDir: "clips/{segmentId}.ogg"
-  timestamp: string;  // ISO - when the speaker started talking
+  audioFile: string; // relative to sessionDir: "clips/{segmentId}.ogg"
+  timestamp: string; // ISO - when the speaker started talking
   userId: string;
 }
 

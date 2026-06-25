@@ -28,7 +28,7 @@ function startActivation(
   userId: string,
   connection: ReturnType<typeof joinVoiceChannel>,
   onDone: (ref: SegmentRef) => void,
-  activeUsers: Set<string>
+  activeUsers: Set<string>,
 ): void {
   if (activeUsers.has(userId)) return;
   activeUsers.add(userId);
@@ -48,15 +48,22 @@ function startActivation(
   });
 
   const ffmpegProcess = spawn("ffmpeg", [
-    "-f", "s16le", "-ar", String(SAMPLE_RATE), "-ac", String(CHANNELS),
-    "-i", "pipe:0",
-    "-c:a", "libopus", "-b:a", "64k",
+    "-f",
+    "s16le",
+    "-ar",
+    String(SAMPLE_RATE),
+    "-ac",
+    String(CHANNELS),
+    "-i",
+    "pipe:0",
+    "-c:a",
+    "libopus",
+    "-b:a",
+    "64k",
     outputPath,
   ]);
 
-  ffmpegProcess.on("error", (err) =>
-    console.error(`ffmpeg error (${userId}):`, err)
-  );
+  ffmpegProcess.on("error", (err) => console.error(`ffmpeg error (${userId}):`, err));
 
   audioStream.pipe(opusDecoder as any);
   opusDecoder.pipe(ffmpegProcess.stdin! as any);
@@ -75,9 +82,7 @@ export const start = {
     .setDescription("Join your voice channel and start recording"),
   handler: async (interaction: CommandInteraction) => {
     if (activeSession) {
-      await interaction.reply(
-        "A recording is already in progress. Use `/stop` to stop it first."
-      );
+      await interaction.reply("A recording is already in progress. Use `/stop` to stop it first.");
       return;
     }
 
@@ -88,34 +93,24 @@ export const start = {
 
     const guild = interaction.guild;
     if (!guild) {
-      await interaction.reply(
-        "This command can only be used in a server the bot has joined."
-      );
+      await interaction.reply("This command can only be used in a server the bot has joined.");
       return;
     }
 
-    const voiceChannelId = guild.voiceStates.cache.get(
-      interaction.user.id
-    )?.channelId;
+    const voiceChannelId = guild.voiceStates.cache.get(interaction.user.id)?.channelId;
     if (!voiceChannelId) {
-      await interaction.reply(
-        "You must be in a voice channel to use this command."
-      );
+      await interaction.reply("You must be in a voice channel to use this command.");
       return;
     }
 
-    const voiceChannel = guild.channels.cache.get(
-      voiceChannelId
-    ) as VoiceBasedChannel | null;
+    const voiceChannel = guild.channels.cache.get(voiceChannelId) as VoiceBasedChannel | null;
     if (!voiceChannel) {
       await interaction.reply("Could not resolve the voice channel.");
       return;
     }
 
     if (!process.env.MEDIA_PATH) {
-      await interaction.reply(
-        "MEDIA_PATH environment variable is not configured."
-      );
+      await interaction.reply("MEDIA_PATH environment variable is not configured.");
       return;
     }
 
@@ -147,9 +142,7 @@ export const start = {
     const onSegmentDone = (ref: SegmentRef) => {
       workflowHandle
         .signal(segmentRecorded, ref)
-        .catch((err: unknown) =>
-          console.error("[workflow] signal error:", err)
-        );
+        .catch((err: unknown) => console.error("[workflow] signal error:", err));
     };
 
     const endSession = async () => {
@@ -162,9 +155,7 @@ export const start = {
       setActiveSession(null);
       await workflowHandle
         .signal(sessionEnded)
-        .catch((err: unknown) =>
-          console.error("[workflow] sessionEnded signal error:", err)
-        );
+        .catch((err: unknown) => console.error("[workflow] sessionEnded signal error:", err));
       console.log(`[session] ended — ${guildId}:${sessionId}`);
     };
 
@@ -174,13 +165,11 @@ export const start = {
       const channel = oldState.guild.channels.cache.get(channelId);
       if (!channel?.isVoiceBased()) return;
       const humanCount = [...(channel as VoiceBasedChannel).members.values()].filter(
-        (m) => !m.user.bot
+        (m) => !m.user.bot,
       ).length;
       if (humanCount === 0) {
         console.log("[session] voice channel empty, auto-ending");
-        endSession().catch((err: unknown) =>
-          console.error("[session] auto-end error:", err)
-        );
+        endSession().catch((err: unknown) => console.error("[session] auto-end error:", err));
       }
     };
 
@@ -200,19 +189,12 @@ export const start = {
 
     connection.receiver.speaking.on("start", (userId: string) => {
       const segId = String(segmentCounter++).padStart(4, "0");
-      startActivation(
-        sessionDir,
-        segId,
-        userId,
-        connection,
-        onSegmentDone,
-        activeUsers
-      );
+      startActivation(sessionDir, segId, userId, connection, onSegmentDone, activeUsers);
       if (activeSession) activeSession.segmentCount = segmentCounter;
     });
 
     await interaction.reply(
-      `Joined **${voiceChannel.name}** and started recording. Session \`${sessionId}\` in \`${sessionDir}\`.`
+      `Joined **${voiceChannel.name}** and started recording. Session \`${sessionId}\` in \`${sessionDir}\`.`,
     );
   },
 };
