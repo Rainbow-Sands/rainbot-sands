@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, type CommandInteraction } from "discord.js";
-import { activeSession, setActiveSession } from "../recording.ts";
-import { sessionEndedSignal } from "../../workflows/session.ts";
+import { activeSession } from "../recording.ts";
 
 export const stop = {
   data: new SlashCommandBuilder()
@@ -12,20 +11,11 @@ export const stop = {
       return;
     }
 
-    const { connection, activations, sessionDir, workflowHandle } =
-      activeSession;
-
-    for (const stream of connection.receiver.subscriptions.values()) {
-      stream.destroy();
-    }
-
-    connection.destroy();
-    setActiveSession(null);
-
-    await workflowHandle.signal(sessionEndedSignal);
+    const { segmentCount, sessionDir } = activeSession;
+    await activeSession.end();
 
     await interaction.reply(
-      `Recording stopped. ${activations.length} voice activation(s) recorded. Transcript will be saved to \`${sessionDir}/transcript.txt\`.`,
+      `Recording stopped. ${segmentCount} segment(s) recorded. Transcript and recap will be saved to \`${sessionDir}\`.`
     );
   },
 };

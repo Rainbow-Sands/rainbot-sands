@@ -1,55 +1,138 @@
 import {
   condition,
+  continueAsNew,
+  defineQuery,
   defineSignal,
   proxyActivities,
   setHandler,
+  upsertSearchAttributes,
 } from "@temporalio/workflow";
 import type * as activities from "../activities/transcribe.ts";
-import type { Activation } from "../types.ts";
+import type { SegmentRef, SessionInput, SessionStatus } from "../../types.ts";
 
-const { transcribeAudio, writeTranscript } = proxyActivities<typeof activities>(
-  {
-    startToCloseTimeout: "10 minutes",
-    retry: { maximumAttempts: 5 },
+const { transcribeSegment, aggregateTranscript } = proxyActivities<
+  typeof activities
+>({
+  taskQueue: "rainbot-transcription",
+  startToCloseTimeout: "15 minutes",
+  scheduleToCloseTimeout: "1 hour",
+  retry: {
+    maximumAttempts: 5,
+    initialInterval: "5 seconds",
+    backoffCoefficient: 2,
   },
-);
+});
 
-interface TranscriptLine {
-  timestamp: string;
-  userId: string;
-  text: string;
+const { summarize, recap } = proxyActivities<typeof activities>({
+  taskQueue: "rainbot-summarization",
+  startToCloseTimeout: "30 minutes",
+  scheduleToCloseTimeout: "2 hours",
+  retry: {
+    maximumAttempts: 3,
+    initialInterval: "10 seconds",
+    backoffCoefficient: 2,
+  },
+});
+
+const CONTINUE_AS_NEW_THRESHOLD = 500;
+
+export const segmentRecorded = defineSignal<[SegmentRef]>("segmentRecorded");
+export const sessionEnded = defineSignal("sessionEnded");
+export const getStatus = defineQuery<SessionStatus>("getStatus");
+
+interface SessionContinuation {
+  carriedOverKeys: string[];
 }
 
-export const newActivationSignal = defineSignal<[Activation]>("newActivation");
-export const sessionEndedSignal = defineSignal("sessionEnded");
-
-export async function sessionWorkflow(sessionDir: string): Promise<void> {
-  const pending: Activation[] = [];
-  const done: TranscriptLine[] = [];
+export async function sessionWorkflow(
+  input: SessionInput,
+  continuation?: SessionContinuation
+): Promise<void> {
+  const carriedOverKeys: string[] = continuation?.carriedOverKeys ?? [];
+  const pending: Promise<string | null>[] = [];
   let ended = false;
+  let segmentCount = 0;
+  let transcribedCount = 0;
+  let lastError: string | undefined;
+  let phase: SessionStatus["phase"] = "recording";
 
-  setHandler(newActivationSignal, (activation: Activation) => {
-    pending.push(activation);
+  upsertSearchAttributes({
+    GuildId: [input.guildId],
+    ChannelId: [input.channelId],
+    Status: ["recording"],
+    SegmentCount: [0],
   });
 
-  setHandler(sessionEndedSignal, () => {
+  setHandler(segmentRecorded, (ref: SegmentRef) => {
+    segmentCount++;
+    pending.push(
+      transcribeSegment(input.sessionDir, ref)
+        .then((key) => {
+          transcribedCount++;
+          return key;
+        })
+        .catch((err: unknown) => {
+          lastError = err instanceof Error ? err.message : String(err);
+          return null;
+        })
+    );
+    upsertSearchAttributes({ SegmentCount: [segmentCount] });
+  });
+
+  setHandler(sessionEnded, () => {
     ended = true;
   });
 
-  while (!ended || pending.length > 0) {
-    await condition(() => pending.length > 0 || ended, "8h");
+  setHandler(getStatus, () => ({ phase, segmentCount, transcribedCount, lastError }));
 
-    while (pending.length > 0) {
-      const activation = pending.shift()!;
-      const text = await transcribeAudio(sessionDir, activation.file);
-      if (text !== null) {
-        done.push({
-          timestamp: activation.timestamp,
-          userId: activation.userId,
-          text,
-        });
-        await writeTranscript(sessionDir, done);
-      }
+  // Wait for session end, resetting the 1-hour idle timer on each new segment.
+  let lastSegmentCount = 0;
+  while (!ended) {
+    lastSegmentCount = segmentCount;
+    const hadActivity = await condition(
+      () => segmentCount > lastSegmentCount || ended,
+      "1 hour"
+    );
+    if (!hadActivity) {
+      ended = true; // idle timeout
+    }
+
+    if (segmentCount >= CONTINUE_AS_NEW_THRESHOLD && !ended) {
+      const completedKeys = (await Promise.allSettled(pending))
+        .filter((r): r is PromiseFulfilledResult<string | null> => r.status === "fulfilled")
+        .map((r) => r.value)
+        .filter((k): k is string => k !== null);
+      await continueAsNew<typeof sessionWorkflow>(input, {
+        carriedOverKeys: [...carriedOverKeys, ...completedKeys],
+      });
     }
   }
+
+  // Drain all in-flight transcriptions.
+  phase = "transcribing";
+  upsertSearchAttributes({ Status: ["transcribing"] });
+
+  const newKeys = (await Promise.allSettled(pending))
+    .filter((r): r is PromiseFulfilledResult<string | null> => r.status === "fulfilled")
+    .map((r) => r.value)
+    .filter((k): k is string => k !== null);
+
+  const allKeys = [...carriedOverKeys, ...newKeys];
+
+  if (allKeys.length === 0) {
+    upsertSearchAttributes({ Status: ["done"] });
+    return;
+  }
+
+  // Post-session pipeline.
+  const transcriptKey = await aggregateTranscript(input.sessionDir, allKeys);
+
+  phase = "summarizing";
+  upsertSearchAttributes({ Status: ["summarizing"] });
+
+  const summaryKey = await summarize(input.sessionDir, transcriptKey);
+  await recap(input.sessionDir, summaryKey);
+
+  phase = "done";
+  upsertSearchAttributes({ Status: ["done"] });
 }

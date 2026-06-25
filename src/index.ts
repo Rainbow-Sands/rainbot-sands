@@ -1,6 +1,9 @@
 import { registerCommands, startBot } from "./discord/discord.ts";
+import { startWorker } from "./temporal/worker.ts";
 
 console.log("Registering commands.");
 await registerCommands();
 console.log("Starting the bot.");
-const { bot } = await startBot();
+await startBot();
+console.log("Starting Temporal worker.");
+await startWorker();

@@ -1,5 +1,20 @@
-export interface Activation {
-  file: string;
-  timestamp: string;
+export interface SegmentRef {
+  segmentId: string;
+  audioFile: string;  // relative to sessionDir: "clips/{segmentId}.ogg"
+  timestamp: string;  // ISO - when the speaker started talking
   userId: string;
+}
+
+export interface SessionInput {
+  guildId: string;
+  channelId: string;
+  sessionId: string;
+  sessionDir: string;
+}
+
+export interface SessionStatus {
+  phase: "recording" | "transcribing" | "summarizing" | "done" | "failed";
+  segmentCount: number;
+  transcribedCount: number;
+  lastError?: string;
 }
