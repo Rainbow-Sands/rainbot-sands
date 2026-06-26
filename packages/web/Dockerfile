@@ -3,7 +3,7 @@ FROM node:24 AS builder
 RUN corepack enable
 WORKDIR /app
 
-COPY pnpm-workspace.yaml package.json ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/db/package.json ./packages/db/
 COPY packages/web/package.json ./packages/web/
 
