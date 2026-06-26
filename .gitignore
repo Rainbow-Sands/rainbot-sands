@@ -1,5 +1,14 @@
-/node_modules
-/media
-/.env
-/.vscode
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Local data
+media/
+
+# Editor
+.vscode/
 .DS_Store

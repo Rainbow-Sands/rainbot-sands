@@ -1,0 +1,21 @@
+{
+  "name": "@rainbot/db",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "drizzle-orm": "latest",
+    "postgres": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "drizzle-kit": "latest",
+    "typescript": "^6.0.0"
+  }
+}

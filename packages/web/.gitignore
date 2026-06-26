@@ -1,0 +1,5 @@
+# SvelteKit generated files
+.svelte-kit/
+
+# Production build
+build/

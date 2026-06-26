@@ -8,7 +8,7 @@ import {
   upsertSearchAttributes,
 } from "@temporalio/workflow";
 import type * as activities from "../activities/transcribe.ts";
-import type { SegmentRef, SessionInput, SessionStatus } from "../../types.ts";
+import type { SegmentRef, SessionInput, SessionStatus } from "../types.ts";
 
 const { transcribeSegment, aggregateTranscript } = proxyActivities<typeof activities>({
   taskQueue: "rainbot-transcription",

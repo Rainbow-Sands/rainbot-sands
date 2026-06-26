@@ -1,7 +1,7 @@
 import { Context, ApplicationFailure } from "@temporalio/activity";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import path from "path";
-import type { SegmentRef } from "../../types.ts";
+import type { SegmentRef } from "../types.ts";
 import { WHISPER_URL, LLAMA_URL } from "../env.ts";
 
 interface WhisperResponse {

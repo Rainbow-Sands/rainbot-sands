@@ -1,6 +1,5 @@
 import type { Client, VoiceBasedChannel } from "discord.js";
-import { getTemporalClient } from "../temporal/client.ts";
-import { sessionEnded } from "../temporal/workflows/session.ts";
+import { getTemporalClient, sessionEnded } from "@rainbot/temporal";
 import { attachRecordingSession } from "./session.ts";
 import { MEDIA_PATH } from "./env.ts";
 import path from "path";

@@ -1,0 +1,23 @@
+{
+  "name": "@rainbot/web",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+  },
+  "dependencies": {
+    "@rainbot/db": "workspace:*"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-node": "latest",
+    "@sveltejs/kit": "latest",
+    "@types/node": "^25.0.0",
+    "svelte": "latest",
+    "svelte-check": "latest",
+    "typescript": "^6.0.0",
+    "vite": "latest"
+  }
+}

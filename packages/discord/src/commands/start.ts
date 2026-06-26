@@ -3,14 +3,14 @@ import {
   type CommandInteraction,
   type VoiceBasedChannel,
 } from "discord.js";
-import { getTemporalClient } from "../../temporal/client.ts";
 import {
+  getTemporalClient,
   sessionWorkflow,
-} from "../../temporal/workflows/session.ts";
+} from "@rainbot/temporal";
 import { getActiveSession } from "../recording.ts";
 import { attachRecordingSession } from "../session.ts";
 import { MEDIA_PATH } from "../env.ts";
-import type { SessionInput } from "../../types.ts";
+import type { SessionInput } from "@rainbot/temporal";
 import path from "path";
 
 export const start = {

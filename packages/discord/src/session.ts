@@ -14,8 +14,8 @@ import { getActiveSession, setActiveSession } from "./recording.ts";
 import {
   segmentRecorded,
   sessionEnded,
-} from "../temporal/workflows/session.ts";
-import type { SegmentRef } from "../types.ts";
+} from "@rainbot/temporal";
+import type { SegmentRef } from "@rainbot/temporal";
 
 const SAMPLE_RATE = 48000;
 const CHANNELS = 2;
