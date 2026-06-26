@@ -2,6 +2,7 @@ import { Context, ApplicationFailure } from "@temporalio/activity";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import path from "path";
 import type { SegmentRef } from "../../types.ts";
+import { WHISPER_URL, LLAMA_URL } from "../env.ts";
 
 interface WhisperResponse {
   text: string;
@@ -22,8 +23,7 @@ export async function transcribeSegment(
   sessionDir: string,
   ref: SegmentRef,
 ): Promise<string | null> {
-  const whisperUrl = process.env.WHISPER_URL;
-  if (!whisperUrl) throw ApplicationFailure.nonRetryable("WHISPER_URL not set");
+  const whisperUrl = WHISPER_URL;
 
   const audioPath = path.join(sessionDir, ref.audioFile);
   if (!existsSync(audioPath)) {
@@ -119,8 +119,7 @@ export async function aggregateTranscript(sessionDir: string, keys: string[]): P
 // ── Post-session pipeline ─────────────────────────────────────────────────────
 
 async function llamaComplete(prompt: string, system: string): Promise<string> {
-  const llamaUrl = process.env.LLAMA_URL;
-  if (!llamaUrl) throw ApplicationFailure.nonRetryable("LLAMA_URL not set");
+  const llamaUrl = LLAMA_URL;
 
   const abortController = new AbortController();
   Context.current().cancelled.catch(() => abortController.abort());

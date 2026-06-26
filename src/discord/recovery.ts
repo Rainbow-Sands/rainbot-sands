@@ -2,11 +2,11 @@ import type { Client, VoiceBasedChannel } from "discord.js";
 import { getTemporalClient } from "../temporal/client.ts";
 import { sessionEnded } from "../temporal/workflows/session.ts";
 import { attachRecordingSession } from "./session.ts";
+import { MEDIA_PATH } from "./env.ts";
 import path from "path";
 
 export async function recoverSessions(bot: Client): Promise<void> {
-  if (!process.env.MEDIA_PATH) return;
-
+  console.log("Recovering any active sessions.");
   const temporalClient = await getTemporalClient();
 
   for (const [guildId, guild] of bot.guilds.cache) {
@@ -21,29 +21,33 @@ export async function recoverSessions(bot: Client): Promise<void> {
 
       const [, , channelId, sessionId] = parts;
       const handle = temporalClient.workflow.getHandle(workflow.workflowId);
-      const sessionDir = path.join(process.env.MEDIA_PATH!, guildId, sessionId);
+      const sessionDir = path.join(MEDIA_PATH, guildId, sessionId);
 
       const channel = guild.channels.cache.get(channelId);
       if (!channel?.isVoiceBased()) {
-        console.log(`[recovery] channel ${channelId} not found, ending workflow`);
+        console.log(
+          `[recovery] channel ${channelId} not found, ending workflow`,
+        );
         await handle.signal(sessionEnded).catch(() => {});
         continue;
       }
 
       const voiceChannel = channel as VoiceBasedChannel;
       const humanCount = [...voiceChannel.members.values()].filter(
-        (m) => !m.user.bot
+        (m) => !m.user.bot,
       ).length;
 
       if (humanCount === 0) {
         console.log(
-          `[recovery] channel empty for session ${sessionId}, ending workflow`
+          `[recovery] channel empty for session ${sessionId}, ending workflow`,
         );
         await handle.signal(sessionEnded).catch(() => {});
         continue;
       }
 
-      console.log(`[recovery] resuming session ${sessionId} in guild ${guildId}`);
+      console.log(
+        `[recovery] resuming session ${sessionId} in guild ${guildId}`,
+      );
       attachRecordingSession(
         bot,
         voiceChannel,
@@ -51,7 +55,7 @@ export async function recoverSessions(bot: Client): Promise<void> {
         guildId,
         channelId,
         sessionId,
-        sessionDir
+        sessionDir,
       );
     }
   }

@@ -9,6 +9,7 @@ import {
 } from "../../temporal/workflows/session.ts";
 import { getActiveSession } from "../recording.ts";
 import { attachRecordingSession } from "../session.ts";
+import { MEDIA_PATH } from "../env.ts";
 import type { SessionInput } from "../../types.ts";
 import path from "path";
 
@@ -57,16 +58,9 @@ export const start = {
       return;
     }
 
-    if (!process.env.MEDIA_PATH) {
-      await interaction.reply(
-        "MEDIA_PATH environment variable is not configured."
-      );
-      return;
-    }
-
     const channelId = voiceChannel.id;
     const sessionId = Date.now().toString();
-    const sessionDir = path.join(process.env.MEDIA_PATH, guildId, sessionId);
+    const sessionDir = path.join(MEDIA_PATH, guildId, sessionId);
 
     const client = await getTemporalClient();
     const workflowHandle = await client.workflow.start(sessionWorkflow, {

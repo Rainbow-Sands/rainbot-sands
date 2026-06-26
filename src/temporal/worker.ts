@@ -1,17 +1,21 @@
 import { NativeConnection, Worker } from "@temporalio/worker";
 import { fileURLToPath } from "url";
 import * as activities from "./activities/transcribe.ts";
+import { TEMPORAL_URL } from "./env.ts";
 
 export async function startWorker(): Promise<void> {
+  console.log("Starting Temporal worker.");
   const connection = await NativeConnection.connect({
-    address: process.env.TEMPORAL_URL,
+    address: TEMPORAL_URL,
   });
 
   const workflowWorker = await Worker.create({
     connection,
     namespace: "rainbot",
     taskQueue: "rainbot",
-    workflowsPath: fileURLToPath(new URL("./workflows/session.ts", import.meta.url)),
+    workflowsPath: fileURLToPath(
+      new URL("./workflows/session.ts", import.meta.url),
+    ),
   });
 
   const transcriptionWorker = await Worker.create({
@@ -50,9 +54,11 @@ export async function startWorker(): Promise<void> {
   process.on("SIGTERM", shutdown);
   process.on("SIGINT", shutdown);
 
-  Promise.all([workflowWorker.run(), transcriptionWorker.run(), summarizationWorker.run()]).catch(
-    (err: unknown) => console.error("[temporal] worker error:", err),
-  );
+  Promise.all([
+    workflowWorker.run(),
+    transcriptionWorker.run(),
+    summarizationWorker.run(),
+  ]).catch((err: unknown) => console.error("[temporal] worker error:", err));
 
   console.log(
     "[temporal] workers started (rainbot / rainbot-transcription / rainbot-summarization)",
