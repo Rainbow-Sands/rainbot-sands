@@ -1,0 +1,126 @@
+name: rainbot
+
+services:
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  temporal:
+    image: temporalio/auto-setup:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PWD: ${POSTGRES_PASSWORD}
+      POSTGRES_SEEDS: postgres
+    ports:
+      - "7233:7233"
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    ports:
+      - "8080:8080"
+
+  # ── One-shot setup ──────────────────────────────────────────────────────────
+
+  temporal-setup:
+    image: temporalio/admin-tools:latest
+    depends_on:
+      - temporal
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      until temporal operator cluster health --address temporal:7233 2>/dev/null; do
+        echo "Waiting for Temporal..."; sleep 2;
+      done &&
+      temporal operator namespace create --address temporal:7233 rainbot 2>/dev/null || true &&
+      temporal operator search-attribute create --address temporal:7233 --namespace rainbot --name GuildId --type Keyword 2>/dev/null || true &&
+      temporal operator search-attribute create --address temporal:7233 --namespace rainbot --name ChannelId --type Keyword 2>/dev/null || true &&
+      temporal operator search-attribute create --address temporal:7233 --namespace rainbot --name SegmentCount --type Int 2>/dev/null || true &&
+      echo "Temporal setup complete."
+    restart: "no"
+
+  db-migrate:
+    image: ${REGISTRY}/db:main
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    restart: "no"
+
+  # ── Application ─────────────────────────────────────────────────────────────
+
+  discord:
+    build:
+      context: .
+      dockerfile: packages/discord/Dockerfile
+    depends_on:
+      temporal-setup:
+        condition: service_completed_successfully
+      db-migrate:
+        condition: service_completed_successfully
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DISCORD_APPLICATION_ID: ${DISCORD_APPLICATION_ID}
+      MEDIA_PATH: /media
+      TEMPORAL_URL: temporal:7233
+      DATABASE_URL: ${DATABASE_URL}
+    volumes:
+      - media:/media
+    restart: unless-stopped
+
+  temporal-worker:
+    build:
+      context: .
+      dockerfile: packages/temporal/Dockerfile
+    depends_on:
+      temporal-setup:
+        condition: service_completed_successfully
+      db-migrate:
+        condition: service_completed_successfully
+    environment:
+      TEMPORAL_URL: temporal:7233
+      WHISPER_URL: ${WHISPER_URL}
+      LLAMA_URL: ${LLAMA_URL}
+      DATABASE_URL: ${DATABASE_URL}
+      MEDIA_PATH: /media
+    volumes:
+      - media:/media
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  media:
