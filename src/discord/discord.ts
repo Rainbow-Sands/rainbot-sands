@@ -17,8 +17,11 @@ export const startBot = async () => {
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
   });
 
-  bot.once(Events.ClientReady, (c) => {
-    console.log(`Discord bot ready. Logged in as ${c.user.tag}`);
+  const ready = new Promise<void>((resolve) => {
+    bot.once(Events.ClientReady, (c) => {
+      console.log(`Discord bot ready. Logged in as ${c.user.tag}`);
+      resolve();
+    });
   });
 
   bot.on("interactionCreate", async (interaction: Interaction) => {
@@ -33,6 +36,7 @@ export const startBot = async () => {
   });
 
   bot.login(process.env.DISCORD_TOKEN!);
+  await ready;
 
   return { bot };
 };

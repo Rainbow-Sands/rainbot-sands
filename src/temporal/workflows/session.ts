@@ -57,8 +57,7 @@ export async function sessionWorkflow(
   upsertSearchAttributes({
     GuildId: [input.guildId],
     ChannelId: [input.channelId],
-    Status: ["recording"],
-    SegmentCount: [0],
+        SegmentCount: [0],
   });
 
   setHandler(segmentRecorded, (ref: SegmentRef) => {
@@ -105,7 +104,6 @@ export async function sessionWorkflow(
 
   // Drain all in-flight transcriptions.
   phase = "transcribing";
-  upsertSearchAttributes({ Status: ["transcribing"] });
 
   const newKeys = (await Promise.allSettled(pending))
     .filter((r): r is PromiseFulfilledResult<string | null> => r.status === "fulfilled")
@@ -115,19 +113,16 @@ export async function sessionWorkflow(
   const allKeys = [...carriedOverKeys, ...newKeys];
 
   if (allKeys.length === 0) {
-    upsertSearchAttributes({ Status: ["done"] });
-    return;
+      return;
   }
 
   // Post-session pipeline.
   const transcriptKey = await aggregateTranscript(input.sessionDir, allKeys);
 
   phase = "summarizing";
-  upsertSearchAttributes({ Status: ["summarizing"] });
 
   const summaryKey = await summarize(input.sessionDir, transcriptKey);
   await recap(input.sessionDir, summaryKey);
 
   phase = "done";
-  upsertSearchAttributes({ Status: ["done"] });
 }

@@ -13,8 +13,24 @@ export interface RecordingSession {
   end: () => Promise<void>;
 }
 
-export let activeSession: RecordingSession | null = null;
+// One session per guild, multiple guilds per process.
+const activeSessions = new Map<string, RecordingSession>();
 
-export function setActiveSession(session: RecordingSession | null) {
-  activeSession = session;
+export function getActiveSession(guildId: string): RecordingSession | null {
+  return activeSessions.get(guildId) ?? null;
+}
+
+export function setActiveSession(
+  guildId: string,
+  session: RecordingSession | null
+): void {
+  if (session === null) {
+    activeSessions.delete(guildId);
+  } else {
+    activeSessions.set(guildId, session);
+  }
+}
+
+export function getAllActiveSessions(): Map<string, RecordingSession> {
+  return activeSessions;
 }
