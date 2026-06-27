@@ -18,11 +18,8 @@
   function toggle() {
     theme = theme === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", theme);
-    try {
-      localStorage.setItem("theme", theme);
-    } catch (e) {
-      // ignore unavailable storage
-    }
+    // Persist in a cookie so the server can render the right theme on next load.
+    document.cookie = `theme=${theme}; path=/; max-age=31536000; samesite=lax`;
   }
 </script>
 
