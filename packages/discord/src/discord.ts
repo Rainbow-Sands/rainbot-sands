@@ -8,9 +8,10 @@ import {
 } from "discord.js";
 import { start } from "./commands/start.ts";
 import { stop } from "./commands/stop.ts";
+import { campaign } from "./commands/campaign.ts";
 import { DISCORD_TOKEN, DISCORD_APPLICATION_ID } from "./env.ts";
 
-const commands = { start, stop };
+const commands = { start, stop, campaign };
 
 export const registerCommands = async () => {
   console.log("Registering commands.");

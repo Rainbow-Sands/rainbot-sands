@@ -1,4 +1,15 @@
 import { defineConfig } from "drizzle-kit";
+import { loadEnvFile } from "node:process";
+import { fileURLToPath } from "node:url";
+
+// Load the repo-root .env for local development. In Docker/CI the file is
+// absent and the variables come from the environment directly, so ignore the
+// error when it isn't found.
+try {
+  loadEnvFile(fileURLToPath(new URL("../../.env", import.meta.url)));
+} catch {
+  // No .env file present; rely on the existing environment.
+}
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL)
