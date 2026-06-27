@@ -1,0 +1,2 @@
+ALTER TABLE "session_recaps" ADD CONSTRAINT "session_recaps_session_id_unique" UNIQUE("session_id");--> statement-breakpoint
+ALTER TABLE "session_transcripts" ADD CONSTRAINT "session_transcripts_session_id_unique" UNIQUE("session_id");

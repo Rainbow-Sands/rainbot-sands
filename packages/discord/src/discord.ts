@@ -39,6 +39,14 @@ export const startBot = async () => {
   });
 
   bot.on("interactionCreate", async (interaction: Interaction) => {
+    if (interaction.isAutocomplete()) {
+      const command = commands[interaction.commandName as keyof typeof commands];
+      if (command && "autocomplete" in command) {
+        await command.autocomplete(interaction);
+      }
+      return;
+    }
+
     if (!interaction.isChatInputCommand()) {
       return;
     }

@@ -6,8 +6,10 @@ import {
   proxyActivities,
   setHandler,
   upsertSearchAttributes,
+  workflowInfo,
 } from "@temporalio/workflow";
 import type * as activities from "../activities/transcribe.ts";
+import type * as persistActivities from "../activities/persist.ts";
 import type { SegmentRef, SessionInput, SessionStatus } from "../types.ts";
 
 const { transcribeSegment, aggregateTranscript } = proxyActivities<typeof activities>({
@@ -31,6 +33,17 @@ const { summarize, recap } = proxyActivities<typeof activities>({
     backoffCoefficient: 2,
   },
 });
+
+const { recordSessionStart, updateSessionStatus, persistTranscript, persistRecap } =
+  proxyActivities<typeof persistActivities>({
+    taskQueue: "rainbot-transcription",
+    startToCloseTimeout: "1 minute",
+    retry: {
+      maximumAttempts: 10,
+      initialInterval: "2 seconds",
+      backoffCoefficient: 2,
+    },
+  });
 
 const CONTINUE_AS_NEW_THRESHOLD = 500;
 
@@ -57,8 +70,19 @@ export async function sessionWorkflow(
   upsertSearchAttributes({
     GuildId: [input.guildId],
     ChannelId: [input.channelId],
-        SegmentCount: [0],
+    SegmentCount: [0],
   });
+
+  // Record the session row once, on the original run (not on continue-as-new).
+  if (!continuation) {
+    await recordSessionStart({
+      id: input.sessionId,
+      campaignId: input.campaignId,
+      channelId: input.channelId,
+      sessionDir: input.sessionDir,
+      workflowId: workflowInfo().workflowId,
+    });
+  }
 
   setHandler(segmentRecorded, (ref: SegmentRef) => {
     segmentCount++;
@@ -104,6 +128,7 @@ export async function sessionWorkflow(
 
   // Drain all in-flight transcriptions.
   phase = "transcribing";
+  await updateSessionStatus(input.sessionId, "transcribing");
 
   const newKeys = (await Promise.allSettled(pending))
     .filter((r): r is PromiseFulfilledResult<string | null> => r.status === "fulfilled")
@@ -113,16 +138,29 @@ export async function sessionWorkflow(
   const allKeys = [...carriedOverKeys, ...newKeys];
 
   if (allKeys.length === 0) {
-      return;
+    phase = "done";
+    await updateSessionStatus(input.sessionId, "done");
+    return;
   }
 
-  // Post-session pipeline.
-  const transcriptKey = await aggregateTranscript(input.sessionDir, allKeys);
+  try {
+    // Post-session pipeline.
+    const transcriptKey = await aggregateTranscript(input.sessionDir, allKeys);
+    await persistTranscript(input.sessionDir, input.sessionId, transcriptKey);
 
-  phase = "summarizing";
+    phase = "summarizing";
+    await updateSessionStatus(input.sessionId, "summarizing");
 
-  const summaryKey = await summarize(input.sessionDir, transcriptKey);
-  await recap(input.sessionDir, summaryKey);
+    const summaryKey = await summarize(input.sessionDir, transcriptKey);
+    const recapKey = await recap(input.sessionDir, summaryKey);
+    await persistRecap(input.sessionDir, input.sessionId, summaryKey, recapKey);
 
-  phase = "done";
+    phase = "done";
+    await updateSessionStatus(input.sessionId, "done");
+  } catch (err) {
+    phase = "failed";
+    lastError = err instanceof Error ? err.message : String(err);
+    await updateSessionStatus(input.sessionId, "failed");
+    throw err;
+  }
 }

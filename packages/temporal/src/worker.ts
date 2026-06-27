@@ -1,6 +1,7 @@
 import { NativeConnection, Worker } from "@temporalio/worker";
 import { fileURLToPath } from "url";
 import * as activities from "./activities/transcribe.ts";
+import * as persistActivities from "./activities/persist.ts";
 import { TEMPORAL_URL } from "./env.ts";
 
 export async function startWorker(): Promise<void> {
@@ -25,6 +26,11 @@ export async function startWorker(): Promise<void> {
     activities: {
       transcribeSegment: activities.transcribeSegment,
       aggregateTranscript: activities.aggregateTranscript,
+      // DB persistence runs alongside transcription (light, always-on queue).
+      recordSessionStart: persistActivities.recordSessionStart,
+      updateSessionStatus: persistActivities.updateSessionStatus,
+      persistTranscript: persistActivities.persistTranscript,
+      persistRecap: persistActivities.persistRecap,
     },
     maxConcurrentActivityTaskExecutions: 4,
   });

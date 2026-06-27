@@ -8,6 +8,7 @@ export interface SegmentRef {
 export interface SessionInput {
   guildId: string;
   channelId: string;
+  campaignId: string;
   sessionId: string;
   sessionDir: string;
 }

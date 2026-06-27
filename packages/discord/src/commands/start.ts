@@ -1,12 +1,11 @@
 import {
   SlashCommandBuilder,
-  type CommandInteraction,
+  type AutocompleteInteraction,
+  type ChatInputCommandInteraction,
   type VoiceBasedChannel,
 } from "discord.js";
-import {
-  getTemporalClient,
-  sessionWorkflow,
-} from "@rainbot/temporal";
+import { getTemporalClient, sessionWorkflow } from "@rainbot/temporal";
+import { getCampaignsForGuild } from "@rainbot/db";
 import { getActiveSession } from "../recording.ts";
 import { attachRecordingSession } from "../session.ts";
 import { MEDIA_PATH } from "../env.ts";
@@ -16,8 +15,29 @@ import path from "path";
 export const start = {
   data: new SlashCommandBuilder()
     .setName("start")
-    .setDescription("Join your voice channel and start recording"),
-  handler: async (interaction: CommandInteraction) => {
+    .setDescription("Join your voice channel and start recording")
+    .addStringOption((option) =>
+      option
+        .setName("campaign")
+        .setDescription("Which campaign this session belongs to")
+        .setRequired(true)
+        .setAutocomplete(true)
+    ),
+  autocomplete: async (interaction: AutocompleteInteraction) => {
+    if (!interaction.guildId) {
+      await interaction.respond([]);
+      return;
+    }
+    const focused = interaction.options.getFocused().toLowerCase();
+    const campaigns = await getCampaignsForGuild(interaction.guildId);
+    await interaction.respond(
+      campaigns
+        .filter((c) => c.name.toLowerCase().includes(focused))
+        .slice(0, 25)
+        .map((c) => ({ name: c.name, value: c.id }))
+    );
+  },
+  handler: async (interaction: ChatInputCommandInteraction) => {
     if (!interaction.guildId) {
       await interaction.reply("This command can only be used in a server.");
       return;
@@ -37,6 +57,13 @@ export const start = {
       await interaction.reply(
         "This command can only be used in a server the bot has joined."
       );
+      return;
+    }
+
+    const campaignId = interaction.options.getString("campaign", true);
+    const guildCampaigns = await getCampaignsForGuild(guildId);
+    if (!guildCampaigns.some((c) => c.id === campaignId)) {
+      await interaction.reply("That campaign does not exist in this server.");
       return;
     }
 
@@ -66,7 +93,15 @@ export const start = {
     const workflowHandle = await client.workflow.start(sessionWorkflow, {
       taskQueue: "rainbot",
       workflowId: `session:${guildId}:${channelId}:${sessionId}`,
-      args: [{ guildId, channelId, sessionId, sessionDir } satisfies SessionInput],
+      args: [
+        {
+          guildId,
+          channelId,
+          campaignId,
+          sessionId,
+          sessionDir,
+        } satisfies SessionInput,
+      ],
     });
 
     attachRecordingSession(
@@ -80,7 +115,7 @@ export const start = {
     );
 
     await interaction.reply(
-      `Joined **${voiceChannel.name}** and started recording. Session \`${sessionId}\` in \`${sessionDir}\`.`
+      `Joined **${voiceChannel.name}** and started recording. Session \`${sessionId}\`.`
     );
   },
 };

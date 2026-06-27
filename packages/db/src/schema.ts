@@ -65,7 +65,8 @@ export const sessionTranscripts = pgTable("session_transcripts", {
   id: uuid("id").primaryKey().defaultRandom(),
   sessionId: varchar("session_id", { length: 30 })
     .references(() => sessions.id)
-    .notNull(),
+    .notNull()
+    .unique(),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -74,7 +75,8 @@ export const sessionRecaps = pgTable("session_recaps", {
   id: uuid("id").primaryKey().defaultRandom(),
   sessionId: varchar("session_id", { length: 30 })
     .references(() => sessions.id)
-    .notNull(),
+    .notNull()
+    .unique(),
   summary: text("summary").notNull(),
   recap: text("recap").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
