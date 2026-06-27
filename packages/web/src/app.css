@@ -1,0 +1,175 @@
+/* ── Theme tokens ─────────────────────────────────────────────────────────────
+   Light (parchment) is the default. System dark applies only when the user has
+   made no explicit choice (:not([data-theme])); an explicit data-theme always
+   wins, so the toggle is authoritative. */
+
+:root {
+  --font-display: "Cinzel", Georgia, "Times New Roman", serif;
+  --font-body: "EB Garamond", Georgia, "Times New Roman", serif;
+  --font-mono: "Iosevka", "SFMono-Regular", "Consolas", monospace;
+
+  --bg: #e8dcc0;
+  --surface: #fbf4e3;
+  --surface-sunken: #f1e6cd;
+  --edge: #d2c09a;
+  --ink: #2b2018;
+  --ink-soft: #6c5942;
+  --accent: #58180d;
+  --accent-bright: #922610;
+  --gold: #9c7a2b;
+  --link: #7a200f;
+  --link-hover: #922610;
+  --shadow: rgba(70, 48, 22, 0.22);
+  color-scheme: light;
+}
+
+/* dark = inked leather + candlelit gold */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #14110c;
+    --surface: #211a13;
+    --surface-sunken: #1a140e;
+    --edge: #3c2f20;
+    --ink: #ece0c8;
+    --ink-soft: #b7a484;
+    --accent: #c0392b;
+    --accent-bright: #e0573f;
+    --gold: #d4af6a;
+    --link: #e0a96d;
+    --link-hover: #f3c98d;
+    --shadow: rgba(0, 0, 0, 0.55);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #14110c;
+  --surface: #211a13;
+  --surface-sunken: #1a140e;
+  --edge: #3c2f20;
+  --ink: #ece0c8;
+  --ink-soft: #b7a484;
+  --accent: #c0392b;
+  --accent-bright: #e0573f;
+  --gold: #d4af6a;
+  --link: #e0a96d;
+  --link-hover: #f3c98d;
+  --shadow: rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--ink);
+  background-color: var(--bg);
+  /* subtle parchment vignette */
+  background-image: radial-gradient(
+    120% 80% at 50% 0%,
+    rgba(255, 255, 255, 0.06),
+    transparent 60%
+  );
+  background-attachment: fixed;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1.2;
+  margin: 0 0 0.4em;
+}
+
+h1 {
+  font-size: 2.4rem;
+  letter-spacing: 0.02em;
+}
+
+h2 {
+  font-size: 1.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-top: 1.6rem;
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+
+p {
+  margin: 0 0 1rem;
+}
+
+/* ── Tapered rule (the iconic stat-block divider) ─────────────────────────── */
+.tapered-rule {
+  display: block;
+  width: 100%;
+  height: 5px;
+  margin: 0.35rem 0 1rem;
+  color: var(--accent-bright);
+}
+.tapered-rule polyline {
+  fill: currentColor;
+}
+
+/* ── Cards / panels ───────────────────────────────────────────────────────── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  border-top: 4px solid var(--accent);
+  border-radius: 4px;
+  padding: 1.5rem 1.75rem;
+  box-shadow: 0 4px 14px var(--shadow);
+}
+
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.muted {
+  color: var(--ink-soft);
+}
+
+.empty {
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fbf4e3;
+  background: var(--accent);
+  border: 1px solid var(--accent-bright);
+  border-radius: 3px;
+  padding: 0.55rem 1.1rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn:hover {
+  background: var(--accent-bright);
+  color: #fff;
+  text-decoration: none;
+}

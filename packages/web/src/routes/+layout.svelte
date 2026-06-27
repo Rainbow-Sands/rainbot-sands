@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import type { LayoutData } from "./$types";
+  import ThemeToggle from "$lib/components/ThemeToggle.svelte";
+  import "../app.css";
 
   let { data, children }: { data: LayoutData; children: Snippet } = $props();
 </script>
@@ -9,11 +11,12 @@
   <a href="/" class="brand">Rainbot</a>
   <nav>
     {#if data.user}
-      <span>{data.user.username}</span>
-      <a href="/auth/logout">Log out</a>
+      <span class="who">{data.user.username}</span>
+      <a class="navlink" href="/auth/logout">Log out</a>
     {:else}
-      <a href="/auth/login">Log in with Discord</a>
+      <a class="navlink" href="/auth/login">Log in</a>
     {/if}
+    <ThemeToggle />
   </nav>
 </header>
 
@@ -22,40 +25,45 @@
 </main>
 
 <style>
-  :global(body) {
-    font-family: system-ui, sans-serif;
-    margin: 0;
-    background: #1a1a1e;
-    color: #e8e8ea;
-  }
   header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 1.5rem;
-    background: #25252b;
-    border-bottom: 1px solid #34343c;
+    padding: 0.85rem 1.5rem;
+    background: var(--surface);
+    border-bottom: 3px double var(--accent);
+    box-shadow: 0 2px 10px var(--shadow);
   }
   .brand {
+    font-family: var(--font-display);
     font-weight: 700;
-    font-size: 1.2rem;
-    color: #e8e8ea;
+    font-size: 1.4rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .brand:hover {
     text-decoration: none;
+    color: var(--accent-bright);
   }
   nav {
     display: flex;
-    gap: 1rem;
+    gap: 1.1rem;
     align-items: center;
   }
-  nav span {
-    color: #a8a8b0;
+  .who {
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .navlink {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
   }
   main {
-    max-width: 800px;
+    max-width: 820px;
     margin: 0 auto;
-    padding: 2rem 1.5rem;
-  }
-  :global(a) {
-    color: #8ab4f8;
+    padding: 2.5rem 1.5rem 4rem;
   }
 </style>

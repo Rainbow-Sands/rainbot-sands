@@ -1,73 +1,117 @@
 <script lang="ts">
   import type { PageData } from "./$types";
+  import TaperedRule from "$lib/components/TaperedRule.svelte";
 
   let { data }: { data: PageData } = $props();
 
   const dm = $derived(data.campaign.members.find((m) => m.role === "dm"));
-  const players = $derived(
-    data.campaign.members.filter((m) => m.role !== "dm")
-  );
+  const players = $derived(data.campaign.members.filter((m) => m.role !== "dm"));
 
   function formatDate(d: Date | string): string {
-    return new Date(d).toLocaleString("en-CA");
+    return new Date(d).toLocaleDateString("en-CA", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   }
 </script>
 
 <svelte:head><title>{data.campaign.name}</title></svelte:head>
 
-<p><a href="/">← Campaigns</a></p>
-<h1>{data.campaign.name}</h1>
-{#if data.campaign.description}
-  <p>{data.campaign.description}</p>
-{/if}
+<p><a href="/">← All campaigns</a></p>
 
-<h2>Dungeon Master</h2>
-<p>{dm ? dm.username : "—"}</p>
+<div class="panel">
+  <p class="eyebrow">Campaign</p>
+  <h1>{data.campaign.name}</h1>
+  <TaperedRule />
+  {#if data.campaign.description}
+    <p>{data.campaign.description}</p>
+  {/if}
 
-<h2>Players</h2>
-{#if players.length === 0}
-  <p>No players yet.</p>
-{:else}
-  <ul>
-    {#each players as player (player.id)}
-      <li>{player.username}</li>
-    {/each}
-  </ul>
-{/if}
+  <h2>Dungeon Master</h2>
+  <p class="lead">{dm ? dm.username : "—"}</p>
 
-<h2>Sessions</h2>
-{#if data.campaign.sessions.length === 0}
-  <p>No sessions recorded yet.</p>
-{:else}
-  <ul class="sessions">
-    {#each data.campaign.sessions as session (session.id)}
-      <li>
-        <a href="/campaigns/{data.campaign.id}/sessions/{session.id}">
-          {formatDate(session.startedAt)}
-        </a>
-        <span class="status">{session.status}</span>
-      </li>
-    {/each}
-  </ul>
-{/if}
+  <h2>Party</h2>
+  {#if players.length === 0}
+    <p class="empty">No players yet.</p>
+  {:else}
+    <ul class="party">
+      {#each players as player (player.id)}
+        <li>{player.username}</li>
+      {/each}
+    </ul>
+  {/if}
+
+  <h2>Sessions</h2>
+  {#if data.campaign.sessions.length === 0}
+    <p class="empty">No sessions recorded yet.</p>
+  {:else}
+    <ul class="sessions">
+      {#each data.campaign.sessions as session (session.id)}
+        <li>
+          <a href="/campaigns/{data.campaign.id}/sessions/{session.id}">
+            {formatDate(session.startedAt)}
+          </a>
+          <span class="status status-{session.status}">{session.status}</span>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+</div>
 
 <style>
+  .lead {
+    font-size: 1.2rem;
+  }
+  .party {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .party li {
+    background: var(--surface-sunken);
+    border: 1px solid var(--edge);
+    border-radius: 999px;
+    padding: 0.3rem 0.9rem;
+  }
   .sessions {
     list-style: none;
     padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.5rem;
   }
   .sessions li {
-    padding: 0.6rem 1rem;
-    background: #25252b;
-    border-radius: 6px;
-    margin-bottom: 0.5rem;
     display: flex;
+    align-items: center;
     justify-content: space-between;
+    background: var(--surface-sunken);
+    border: 1px solid var(--edge);
+    border-radius: 4px;
+    padding: 0.65rem 1rem;
+  }
+  .sessions a {
+    font-family: var(--font-display);
   }
   .status {
-    color: #a8a8b0;
+    font-family: var(--font-display);
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    font-size: 0.75rem;
-    align-self: center;
+    color: var(--ink-soft);
+    border: 1px solid var(--edge);
+    border-radius: 999px;
+    padding: 0.12rem 0.55rem;
+  }
+  .status-done {
+    color: #2f6b34;
+    border-color: #2f6b34;
+  }
+  .status-failed {
+    color: var(--accent-bright);
+    border-color: var(--accent-bright);
   }
 </style>

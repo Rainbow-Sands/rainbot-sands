@@ -1,23 +1,31 @@
 <script lang="ts">
   import type { PageData } from "./$types";
+  import TaperedRule from "$lib/components/TaperedRule.svelte";
 
   let { data }: { data: PageData } = $props();
 </script>
 
 <svelte:head><title>Rainbot</title></svelte:head>
 
-{#if !data.campaigns}
-  <p>Something went wrong.</p>
-{:else if data.campaigns.length === 0}
-  <h1>Welcome to Rainbot</h1>
-  <p>Log in with Discord to see your campaigns.</p>
-  <p><a href="/auth/login">Log in with Discord</a></p>
+{#if data.campaigns.length === 0}
+  <div class="panel hero">
+    <p class="eyebrow">Chronicle of the Realms</p>
+    <h1>Welcome, adventurer</h1>
+    <TaperedRule />
+    <p class="muted">
+      Log in with Discord to consult the chronicles of your campaigns — their
+      sessions, transcripts, and recaps.
+    </p>
+    <p><a class="btn" href="/auth/login">Log in with Discord</a></p>
+  </div>
 {:else}
-  <h1>Your campaigns</h1>
+  <p class="eyebrow">Your Chronicles</p>
+  <h1>Campaigns</h1>
+  <TaperedRule />
   <ul class="campaigns">
     {#each data.campaigns as campaign (campaign.id)}
       <li>
-        <a href="/campaigns/{campaign.id}">{campaign.name}</a>
+        <a class="title" href="/campaigns/{campaign.id}">{campaign.name}</a>
         <span class="role">{campaign.role}</span>
       </li>
     {/each}
@@ -25,22 +33,43 @@
 {/if}
 
 <style>
+  .hero {
+    text-align: center;
+  }
+  .hero .btn {
+    margin-top: 0.5rem;
+  }
   .campaigns {
     list-style: none;
     padding: 0;
+    margin: 1rem 0 0;
+    display: grid;
+    gap: 0.75rem;
   }
   .campaigns li {
-    padding: 0.75rem 1rem;
-    background: #25252b;
-    border-radius: 6px;
-    margin-bottom: 0.5rem;
     display: flex;
+    align-items: center;
     justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--edge);
+    border-left: 4px solid var(--accent);
+    border-radius: 4px;
+    padding: 0.9rem 1.2rem;
+    box-shadow: 0 3px 10px var(--shadow);
+  }
+  .campaigns .title {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    color: var(--accent);
   }
   .role {
-    color: #a8a8b0;
+    font-family: var(--font-display);
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    font-size: 0.75rem;
-    align-self: center;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    border-radius: 999px;
+    padding: 0.15rem 0.6rem;
   }
 </style>
