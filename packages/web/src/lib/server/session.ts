@@ -1,19 +1,13 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { SESSION_SECRET } from "./env";
 
 export interface SessionUser {
   id: string;
   username: string;
 }
 
-function secret(): string {
-  const value = process.env.SESSION_SECRET;
-  if (!value)
-    throw new Error("Missing required environment variable: SESSION_SECRET");
-  return value;
-}
-
 function sign(data: string): string {
-  return createHmac("sha256", secret()).update(data).digest("base64url");
+  return createHmac("sha256", SESSION_SECRET).update(data).digest("base64url");
 }
 
 // Stateless session token: base64url(payload).hmac — no server-side store.

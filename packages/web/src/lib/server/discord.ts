@@ -1,22 +1,10 @@
+import { DISCORD_APPLICATION_ID, DISCORD_CLIENT_SECRET } from "./env";
+
 const DISCORD_API = "https://discord.com/api";
-
-function clientId(): string {
-  const value = process.env.DISCORD_APPLICATION_ID;
-  if (!value)
-    throw new Error("Missing required environment variable: DISCORD_APPLICATION_ID");
-  return value;
-}
-
-function clientSecret(): string {
-  const value = process.env.DISCORD_CLIENT_SECRET;
-  if (!value)
-    throw new Error("Missing required environment variable: DISCORD_CLIENT_SECRET");
-  return value;
-}
 
 export function getAuthorizeUrl(redirectUri: string, state: string): string {
   const params = new URLSearchParams({
-    client_id: clientId(),
+    client_id: DISCORD_APPLICATION_ID,
     redirect_uri: redirectUri,
     response_type: "code",
     scope: "identify",
@@ -33,8 +21,8 @@ export async function exchangeCode(
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: clientId(),
-      client_secret: clientSecret(),
+      client_id: DISCORD_APPLICATION_ID,
+      client_secret: DISCORD_CLIENT_SECRET,
       grant_type: "authorization_code",
       code,
       redirect_uri: redirectUri,

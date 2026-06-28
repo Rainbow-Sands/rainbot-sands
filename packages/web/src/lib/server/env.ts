@@ -1,0 +1,14 @@
+import { building } from "$app/environment";
+import { env } from "$env/dynamic/private";
+
+function get(name: string): string {
+  const value = env[name];
+  if (!value && !building) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value as string;
+}
+
+export const DISCORD_APPLICATION_ID = get("DISCORD_APPLICATION_ID");
+export const DISCORD_CLIENT_SECRET = get("DISCORD_CLIENT_SECRET");
+export const SESSION_SECRET = get("SESSION_SECRET");
