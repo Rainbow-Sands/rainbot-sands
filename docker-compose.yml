@@ -60,20 +60,18 @@ services:
     restart: "no"
 
   db-migrate:
-    image: ${REGISTRY}/db:main
+    image: ghcr.io/danielpower/rainbot-sands/db:main
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     restart: "no"
 
   # ── Application ─────────────────────────────────────────────────────────────
 
   discord:
-    build:
-      context: .
-      dockerfile: packages/discord/Dockerfile
+    image: ghcr.io/danielpower/rainbot-sands/discord:main
     depends_on:
       temporal-setup:
         condition: service_completed_successfully
@@ -84,15 +82,13 @@ services:
       DISCORD_APPLICATION_ID: ${DISCORD_APPLICATION_ID}
       MEDIA_PATH: /media
       TEMPORAL_URL: temporal:7233
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     volumes:
       - media:/media
     restart: unless-stopped
 
   temporal-worker:
-    build:
-      context: .
-      dockerfile: packages/temporal/Dockerfile
+    image: ghcr.io/danielpower/rainbot-sands/temporal:main
     depends_on:
       temporal-setup:
         condition: service_completed_successfully
@@ -102,21 +98,22 @@ services:
       TEMPORAL_URL: temporal:7233
       WHISPER_URL: ${WHISPER_URL}
       LLAMA_URL: ${LLAMA_URL}
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       MEDIA_PATH: /media
     volumes:
       - media:/media
     restart: unless-stopped
 
   web:
-    build:
-      context: .
-      dockerfile: packages/web/Dockerfile
+    image: ghcr.io/danielpower/rainbot-sands/web:main
     depends_on:
       db-migrate:
         condition: service_completed_successfully
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DISCORD_APPLICATION_ID: ${DISCORD_APPLICATION_ID}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+      SESSION_SECRET: ${SESSION_SECRET}
     ports:
       - "3000:3000"
     restart: unless-stopped
