@@ -30,6 +30,7 @@ export async function startWorker(): Promise<void> {
       recordSessionStart: persistActivities.recordSessionStart,
       updateSessionStatus: persistActivities.updateSessionStatus,
       persistTranscript: persistActivities.persistTranscript,
+      persistSummary: persistActivities.persistSummary,
       persistRecap: persistActivities.persistRecap,
       persistTitle: persistActivities.persistTitle,
     },

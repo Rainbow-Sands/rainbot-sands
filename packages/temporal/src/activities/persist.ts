@@ -5,6 +5,7 @@ import {
   setSessionStatus,
   setSessionTitle,
   saveTranscript,
+  saveSummary,
   saveRecap,
   type UpsertSessionInput,
 } from "@rainbot/db";
@@ -47,17 +48,22 @@ export async function persistTranscript(
   await saveTranscript(sessionId, readFileSync(p, "utf8"));
 }
 
+export async function persistSummary(
+  sessionDir: string,
+  sessionId: string,
+  summaryKey: string
+): Promise<void> {
+  const p = path.join(sessionDir, summaryKey);
+  if (!existsSync(p)) return;
+  await saveSummary(sessionId, readFileSync(p, "utf8"));
+}
+
 export async function persistRecap(
   sessionDir: string,
   sessionId: string,
-  summaryKey: string,
   recapKey: string
 ): Promise<void> {
-  const summaryPath = path.join(sessionDir, summaryKey);
-  const recapPath = path.join(sessionDir, recapKey);
-  const summary = existsSync(summaryPath)
-    ? readFileSync(summaryPath, "utf8")
-    : "";
-  const recap = existsSync(recapPath) ? readFileSync(recapPath, "utf8") : "";
-  await saveRecap(sessionId, summary, recap);
+  const p = path.join(sessionDir, recapKey);
+  if (!existsSync(p)) return;
+  await saveRecap(sessionId, readFileSync(p, "utf8"));
 }

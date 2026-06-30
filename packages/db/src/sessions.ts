@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "./client.ts";
-import { sessions, sessionTranscripts, sessionRecaps } from "./schema.ts";
+import { sessions } from "./schema.ts";
 
 export interface UpsertSessionInput {
   id: string;
@@ -55,27 +55,30 @@ export async function setSessionTitle(
 
 export async function saveTranscript(
   sessionId: string,
-  content: string
+  transcript: string
 ): Promise<void> {
   await db
-    .insert(sessionTranscripts)
-    .values({ sessionId, content })
-    .onConflictDoUpdate({
-      target: sessionTranscripts.sessionId,
-      set: { content },
-    });
+    .update(sessions)
+    .set({ transcript })
+    .where(eq(sessions.id, sessionId));
+}
+
+export async function saveSummary(
+  sessionId: string,
+  summary: string
+): Promise<void> {
+  await db
+    .update(sessions)
+    .set({ summary })
+    .where(eq(sessions.id, sessionId));
 }
 
 export async function saveRecap(
   sessionId: string,
-  summary: string,
   recap: string
 ): Promise<void> {
   await db
-    .insert(sessionRecaps)
-    .values({ sessionId, summary, recap })
-    .onConflictDoUpdate({
-      target: sessionRecaps.sessionId,
-      set: { summary, recap },
-    });
+    .update(sessions)
+    .set({ recap })
+    .where(eq(sessions.id, sessionId));
 }

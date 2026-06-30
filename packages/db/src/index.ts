@@ -17,6 +17,7 @@ export {
   setSessionStatus,
   setSessionTitle,
   saveTranscript,
+  saveSummary,
   saveRecap,
   type UpsertSessionInput,
 } from "./sessions.ts";

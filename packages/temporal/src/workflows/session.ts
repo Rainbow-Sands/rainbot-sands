@@ -38,6 +38,7 @@ const {
   recordSessionStart,
   updateSessionStatus,
   persistTranscript,
+  persistSummary,
   persistRecap,
   persistTitle,
 } = proxyActivities<typeof persistActivities>({
@@ -157,8 +158,10 @@ export async function sessionWorkflow(
     await updateSessionStatus(input.sessionId, "summarizing");
 
     const summaryKey = await summarize(input.sessionDir, transcriptKey);
+    await persistSummary(input.sessionDir, input.sessionId, summaryKey);
+
     const recapKey = await recap(input.sessionDir, summaryKey);
-    await persistRecap(input.sessionDir, input.sessionId, summaryKey, recapKey);
+    await persistRecap(input.sessionDir, input.sessionId, recapKey);
 
     const titleKey = await generateTitle(input.sessionDir, summaryKey);
     await persistTitle(input.sessionDir, input.sessionId, titleKey);

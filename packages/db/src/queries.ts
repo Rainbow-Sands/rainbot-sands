@@ -4,8 +4,6 @@ import {
   campaigns,
   campaignMembers,
   sessions,
-  sessionRecaps,
-  sessionTranscripts,
   users,
 } from "./schema.ts";
 
@@ -132,18 +130,6 @@ export async function getSessionDetail(
     .limit(1);
   if (!session) return null;
 
-  const [transcript] = await db
-    .select()
-    .from(sessionTranscripts)
-    .where(eq(sessionTranscripts.sessionId, sessionId))
-    .limit(1);
-
-  const [recap] = await db
-    .select()
-    .from(sessionRecaps)
-    .where(eq(sessionRecaps.sessionId, sessionId))
-    .limit(1);
-
   return {
     id: session.id,
     campaignId: session.campaignId,
@@ -151,8 +137,8 @@ export async function getSessionDetail(
     status: session.status,
     startedAt: session.startedAt,
     endedAt: session.endedAt,
-    transcript: transcript?.content ?? null,
-    summary: recap?.summary ?? null,
-    recap: recap?.recap ?? null,
+    transcript: session.transcript,
+    summary: session.summary,
+    recap: session.recap,
   };
 }

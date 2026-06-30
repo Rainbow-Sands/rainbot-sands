@@ -48,6 +48,10 @@ export const campaignMembers = pgTable(
 );
 
 // status: 'recording' | 'transcribing' | 'summarizing' | 'done' | 'failed'
+//
+// transcript, summary, recap, and title are each 1:1 with a session and written
+// independently by the pipeline as they become ready, so they live here as
+// nullable columns (Postgres TOASTs the large text out-of-line automatically).
 export const sessions = pgTable("sessions", {
   id: varchar("id", { length: 30 }).primaryKey(),
   campaignId: uuid("campaign_id")
@@ -58,27 +62,9 @@ export const sessions = pgTable("sessions", {
   sessionDir: text("session_dir").notNull(),
   workflowId: text("workflow_id").notNull(),
   status: varchar("status", { length: 20 }).notNull().default("recording"),
+  transcript: text("transcript"),
+  summary: text("summary"),
+  recap: text("recap"),
   startedAt: timestamp("started_at").defaultNow().notNull(),
   endedAt: timestamp("ended_at"),
-});
-
-export const sessionTranscripts = pgTable("session_transcripts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  sessionId: varchar("session_id", { length: 30 })
-    .references(() => sessions.id)
-    .notNull()
-    .unique(),
-  content: text("content").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const sessionRecaps = pgTable("session_recaps", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  sessionId: varchar("session_id", { length: 30 })
-    .references(() => sessions.id)
-    .notNull()
-    .unique(),
-  summary: text("summary").notNull(),
-  recap: text("recap").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
