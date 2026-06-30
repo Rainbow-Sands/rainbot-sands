@@ -14,9 +14,16 @@ COPY packages/web ./packages/web
 
 RUN pnpm --filter @rainbot/web build
 
+# adapter-node leaves the app's runtime dependencies (svelte, @sveltejs/kit,
+# marked, drizzle-orm, postgres) as bare imports in the per-route server chunks,
+# so they must be present in node_modules at runtime. `pnpm deploy` produces a
+# self-contained, portable node_modules with only the production dependencies.
+RUN pnpm --filter @rainbot/web deploy --prod --legacy /app/deploy
+
 FROM node:24-slim AS runner
 WORKDIR /app
-COPY --from=builder /app/packages/web/build .
-EXPOSE 3000
 ENV NODE_ENV=production
+COPY --from=builder /app/deploy/node_modules ./node_modules
+COPY --from=builder /app/packages/web/build ./
+EXPOSE 3000
 CMD ["node", "index.js"]

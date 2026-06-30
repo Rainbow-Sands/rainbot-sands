@@ -127,6 +127,14 @@ export async function aggregateTranscript(
 
 // ── Post-session pipeline ─────────────────────────────────────────────────────
 
+// Models often wrap a markdown response in a ```markdown … ``` fence despite
+// being asked for raw markdown. Unwrap it, but only when the whole response is a
+// single fenced block, so genuine internal code blocks are left untouched.
+function stripCodeFence(text: string): string {
+  const match = /^```[^\n]*\n([\s\S]*?)\n?```$/.exec(text.trim());
+  return match ? match[1].trim() : text;
+}
+
 async function llamaComplete(prompt: string, system: string): Promise<string> {
   const llamaUrl = LLAMA_URL;
 
@@ -159,7 +167,7 @@ async function llamaComplete(prompt: string, system: string): Promise<string> {
     const data = (await res.json()) as {
       choices: { message: { content: string } }[];
     };
-    return data.choices[0]?.message.content.trim() ?? "";
+    return stripCodeFence(data.choices[0]?.message.content.trim() ?? "");
   } finally {
     clearInterval(heartbeat);
   }

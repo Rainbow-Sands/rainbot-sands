@@ -10,13 +10,13 @@
   },
   "dependencies": {
     "@rainbot/db": "workspace:*",
-    "marked": "^18.0.5"
+    "@sveltejs/kit": "latest",
+    "marked": "^18.0.5",
+    "svelte": "latest"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "latest",
-    "@sveltejs/kit": "latest",
     "@types/node": "^25.0.0",
-    "svelte": "latest",
     "svelte-check": "latest",
     "typescript": "^6.0.0",
     "vite": "latest"
