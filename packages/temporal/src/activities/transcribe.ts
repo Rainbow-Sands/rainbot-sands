@@ -27,7 +27,9 @@ export async function transcribeSegment(
 
   const audioPath = path.join(sessionDir, ref.audioFile);
   if (!existsSync(audioPath)) {
-    throw ApplicationFailure.nonRetryable(`Audio file not found: ${ref.audioFile}`);
+    throw ApplicationFailure.nonRetryable(
+      `Audio file not found: ${ref.audioFile}`,
+    );
   }
 
   const abortController = new AbortController();
@@ -53,14 +55,18 @@ export async function transcribeSegment(
     });
 
     if (res.status >= 400 && res.status < 500) {
-      throw ApplicationFailure.nonRetryable(`Whisper rejected the request: ${res.status}`);
+      throw ApplicationFailure.nonRetryable(
+        `Whisper rejected the request: ${res.status}`,
+      );
     }
     if (!res.ok) throw new Error(`Whisper server returned ${res.status}`);
 
     const result = (await res.json()) as WhisperResponse;
 
     const noSpeechProb =
-      result.segments.length > 0 ? Math.max(...result.segments.map((s) => s.no_speech_prob)) : 1;
+      result.segments.length > 0
+        ? Math.max(...result.segments.map((s) => s.no_speech_prob))
+        : 1;
 
     if (noSpeechProb > NO_SPEECH_THRESHOLD) {
       console.log(
@@ -91,7 +97,10 @@ export async function transcribeSegment(
 
 // ── Aggregation ───────────────────────────────────────────────────────────────
 
-export async function aggregateTranscript(sessionDir: string, keys: string[]): Promise<string> {
+export async function aggregateTranscript(
+  sessionDir: string,
+  keys: string[],
+): Promise<string> {
   const fragments: TranscriptFragment[] = keys
     .map((key) => {
       const p = path.join(sessionDir, key);
@@ -141,7 +150,9 @@ async function llamaComplete(prompt: string, system: string): Promise<string> {
     });
 
     if (res.status >= 400 && res.status < 500) {
-      throw ApplicationFailure.nonRetryable(`LLaMA rejected the request: ${res.status}`);
+      throw ApplicationFailure.nonRetryable(
+        `LLaMA rejected the request: ${res.status}`,
+      );
     }
     if (!res.ok) throw new Error(`LLaMA server returned ${res.status}`);
 
@@ -154,12 +165,23 @@ async function llamaComplete(prompt: string, system: string): Promise<string> {
   }
 }
 
-export async function summarize(sessionDir: string, transcriptKey: string): Promise<string> {
+export async function summarize(
+  sessionDir: string,
+  transcriptKey: string,
+): Promise<string> {
   const transcript = readFileSync(path.join(sessionDir, transcriptKey), "utf8");
 
   const text = await llamaComplete(
     transcript,
-    "You are a note-taker for a tabletop RPG campaign. Given the following session transcript, write a concise summary of what happened: the key events, decisions made, and anything important for next session. Be factual and include character names.",
+    `I am going to give you a full transcript of a DnD game. Your goal is to create a summary of the game that only includes the in-world elements.
+This means you remove all meta commentary, out of character conversations and fluff.
+Your final summary should be a beautifully formatted markdown document of everything that happened in the game.
+For flair - include markdown quotes from characters for funny or impactful moments but ensure they are relevant to the section in question.
+Ensure you include all the details of the game, including all the characters and their actions.
+
+To reiterate - ensure your summary is extremely long and covers every action exhaustively.
+Speak in third person: "The party entered..." etc.
+You only respond with the markdown text of the summary: do not respond with anything else.`,
   );
 
   const outPath = path.join(sessionDir, "summary.txt");
@@ -167,12 +189,21 @@ export async function summarize(sessionDir: string, transcriptKey: string): Prom
   return "summary.txt";
 }
 
-export async function recap(sessionDir: string, summaryKey: string): Promise<string> {
+export async function recap(
+  sessionDir: string,
+  summaryKey: string,
+): Promise<string> {
   const summary = readFileSync(path.join(sessionDir, summaryKey), "utf8");
 
   const text = await llamaComplete(
     summary,
-    "You are the narrator of a tabletop RPG campaign. Given the following session summary, write an engaging, dramatic recap of the session as if recapping for the players at the start of the next session. Write in second person ('you and your companions...').",
+    `I am going to give you a summary of a DnD session. Your goal is to shorten it to just a few paragraphs of the most important parts creating a short 'recap' of the game.
+This recap will be used at the next session to help the players remember what happened.
+Your recap should be in markdown format with nice headers and use of bold.
+
+You only respond with the markdown text of the recap, do not add "Here is the recap" or anything else.
+If the summary has a title, preserve it.
+Speak in third person: "The party entered..." etc.`,
   );
 
   const outPath = path.join(sessionDir, "recap.txt");
