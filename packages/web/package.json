@@ -9,7 +9,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
-    "@rainbot/db": "workspace:*"
+    "@rainbot/db": "workspace:*",
+    "marked": "^18.0.5"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "latest",

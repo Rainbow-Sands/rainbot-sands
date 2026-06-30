@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { marked } from "marked";
   import type { PageData } from "./$types";
   import TaperedRule from "$lib/components/TaperedRule.svelte";
 
@@ -9,6 +10,10 @@
       dateStyle: "long",
       timeStyle: "short",
     });
+  }
+
+  function renderMarkdown(text: string): string {
+    return marked(text) as string;
   }
 </script>
 
@@ -24,14 +29,14 @@
 
   <h2>Recap</h2>
   {#if data.session.recap}
-    <p class="prose">{data.session.recap}</p>
+    <div class="prose">{@html renderMarkdown(data.session.recap)}</div>
   {:else}
     <p class="empty">The bards have not yet composed this tale.</p>
   {/if}
 
   <h2>Summary</h2>
   {#if data.session.summary}
-    <p class="prose">{data.session.summary}</p>
+    <div class="prose">{@html renderMarkdown(data.session.summary)}</div>
   {:else}
     <p class="empty">Not yet available.</p>
   {/if}
@@ -50,7 +55,30 @@
   }
   .prose {
     line-height: 1.7;
-    white-space: pre-wrap;
+  }
+  .prose :global(p) {
+    margin: 0.75em 0;
+  }
+  .prose :global(h1),
+  .prose :global(h2),
+  .prose :global(h3) {
+    font-family: var(--font-display);
+    color: var(--gold);
+    margin: 1.25em 0 0.5em;
+  }
+  .prose :global(ul),
+  .prose :global(ol) {
+    padding-left: 1.5em;
+    margin: 0.75em 0;
+  }
+  .prose :global(li) {
+    margin: 0.25em 0;
+  }
+  .prose :global(strong) {
+    color: var(--text-emphasis, var(--gold));
+  }
+  .prose :global(em) {
+    font-style: italic;
   }
   .transcript {
     font-family: var(--font-mono);
