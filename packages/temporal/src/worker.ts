@@ -70,3 +70,5 @@ export async function startWorker(): Promise<void> {
     "[temporal] workers started (rainbot / rainbot-transcription / rainbot-summarization)",
   );
 }
+
+await startWorker();
