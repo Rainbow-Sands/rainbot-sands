@@ -3,6 +3,7 @@ import path from "path";
 import {
   upsertSession,
   setSessionStatus,
+  setSessionTitle,
   saveTranscript,
   saveRecap,
   type UpsertSessionInput,
@@ -22,6 +23,18 @@ export async function updateSessionStatus(
 ): Promise<void> {
   const terminal = status === "done" || status === "failed";
   await setSessionStatus(sessionId, status, terminal ? new Date() : undefined);
+}
+
+export async function persistTitle(
+  sessionDir: string,
+  sessionId: string,
+  titleKey: string
+): Promise<void> {
+  const p = path.join(sessionDir, titleKey);
+  if (!existsSync(p)) return;
+  const title = readFileSync(p, "utf8").trim();
+  if (!title) return;
+  await setSessionTitle(sessionId, title);
 }
 
 export async function persistTranscript(

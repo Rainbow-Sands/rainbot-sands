@@ -55,6 +55,7 @@ export interface CampaignMember {
 
 export interface CampaignSessionSummary {
   id: string;
+  title: string | null;
   status: string;
   startedAt: Date;
   endedAt: Date | null;
@@ -91,6 +92,7 @@ export async function getCampaignDetail(
   const sessionRows = await db
     .select({
       id: sessions.id,
+      title: sessions.title,
       status: sessions.status,
       startedAt: sessions.startedAt,
       endedAt: sessions.endedAt,
@@ -111,6 +113,7 @@ export async function getCampaignDetail(
 export interface SessionDetail {
   id: string;
   campaignId: string;
+  title: string | null;
   status: string;
   startedAt: Date;
   endedAt: Date | null;
@@ -144,6 +147,7 @@ export async function getSessionDetail(
   return {
     id: session.id,
     campaignId: session.campaignId,
+    title: session.title,
     status: session.status,
     startedAt: session.startedAt,
     endedAt: session.endedAt,

@@ -43,6 +43,16 @@ export async function setSessionStatus(
     .where(eq(sessions.id, sessionId));
 }
 
+export async function setSessionTitle(
+  sessionId: string,
+  title: string
+): Promise<void> {
+  await db
+    .update(sessions)
+    .set({ title })
+    .where(eq(sessions.id, sessionId));
+}
+
 export async function saveTranscript(
   sessionId: string,
   content: string

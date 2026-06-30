@@ -31,6 +31,7 @@ export async function startWorker(): Promise<void> {
       updateSessionStatus: persistActivities.updateSessionStatus,
       persistTranscript: persistActivities.persistTranscript,
       persistRecap: persistActivities.persistRecap,
+      persistTitle: persistActivities.persistTitle,
     },
     maxConcurrentActivityTaskExecutions: 4,
   });
@@ -42,6 +43,7 @@ export async function startWorker(): Promise<void> {
     activities: {
       summarize: activities.summarize,
       recap: activities.recap,
+      generateTitle: activities.generateTitle,
     },
     maxConcurrentActivityTaskExecutions: 2,
   });

@@ -23,7 +23,7 @@ const { transcribeSegment, aggregateTranscript } = proxyActivities<typeof activi
   },
 });
 
-const { summarize, recap } = proxyActivities<typeof activities>({
+const { summarize, recap, generateTitle } = proxyActivities<typeof activities>({
   taskQueue: "rainbot-summarization",
   startToCloseTimeout: "30 minutes",
   scheduleToCloseTimeout: "2 hours",
@@ -34,8 +34,13 @@ const { summarize, recap } = proxyActivities<typeof activities>({
   },
 });
 
-const { recordSessionStart, updateSessionStatus, persistTranscript, persistRecap } =
-  proxyActivities<typeof persistActivities>({
+const {
+  recordSessionStart,
+  updateSessionStatus,
+  persistTranscript,
+  persistRecap,
+  persistTitle,
+} = proxyActivities<typeof persistActivities>({
     taskQueue: "rainbot-transcription",
     startToCloseTimeout: "1 minute",
     retry: {
@@ -154,6 +159,9 @@ export async function sessionWorkflow(
     const summaryKey = await summarize(input.sessionDir, transcriptKey);
     const recapKey = await recap(input.sessionDir, summaryKey);
     await persistRecap(input.sessionDir, input.sessionId, summaryKey, recapKey);
+
+    const titleKey = await generateTitle(input.sessionDir, summaryKey);
+    await persistTitle(input.sessionDir, input.sessionId, titleKey);
 
     phase = "done";
     await updateSessionStatus(input.sessionId, "done");

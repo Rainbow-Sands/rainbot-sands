@@ -15,6 +15,7 @@ export {
 export {
   upsertSession,
   setSessionStatus,
+  setSessionTitle,
   saveTranscript,
   saveRecap,
   type UpsertSessionInput,

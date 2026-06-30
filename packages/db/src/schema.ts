@@ -53,6 +53,7 @@ export const sessions = pgTable("sessions", {
   campaignId: uuid("campaign_id")
     .references(() => campaigns.id)
     .notNull(),
+  title: text("title"),
   channelId: varchar("channel_id", { length: 20 }).notNull(),
   sessionDir: text("session_dir").notNull(),
   workflowId: text("workflow_id").notNull(),

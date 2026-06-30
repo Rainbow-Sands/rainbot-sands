@@ -189,6 +189,31 @@ You only respond with the markdown text of the summary: do not respond with anyt
   return "summary.txt";
 }
 
+export async function generateTitle(
+  sessionDir: string,
+  summaryKey: string,
+): Promise<string> {
+  const summary = readFileSync(path.join(sessionDir, summaryKey), "utf8");
+
+  const text = await llamaComplete(
+    summary,
+    `I am going to give you a summary of a DnD session. Your goal is to write a short, evocative title for the session — the kind of name a chapter in a fantasy novel might have.
+The title should capture the most memorable moment or theme of the session.
+Keep it under 10 words. Use title case. Do not use quotation marks, markdown, or any prefix like "Title:".
+You only respond with the title text, nothing else.`,
+  );
+
+  // Models sometimes wrap the title in quotes despite instructions.
+  const title = text
+    .trim()
+    .replace(/^["'`]+|["'`]+$/g, "")
+    .trim();
+
+  const outPath = path.join(sessionDir, "title.txt");
+  writeFileSync(outPath, title, "utf8");
+  return "title.txt";
+}
+
 export async function recap(
   sessionDir: string,
   summaryKey: string,

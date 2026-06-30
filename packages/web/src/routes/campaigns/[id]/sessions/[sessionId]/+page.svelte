@@ -17,13 +17,19 @@
   }
 </script>
 
-<svelte:head><title>Session — {formatDate(data.session.startedAt)}</title></svelte:head>
+<svelte:head
+  ><title>{data.session.title ?? formatDate(data.session.startedAt)} — Session</title
+  ></svelte:head
+>
 
 <p><a href="/campaigns/{data.session.campaignId}">← Campaign</a></p>
 
 <div class="panel">
   <p class="eyebrow">Session Chronicle</p>
-  <h1>{formatDate(data.session.startedAt)}</h1>
+  <h1>{data.session.title ?? formatDate(data.session.startedAt)}</h1>
+  {#if data.session.title}
+    <p class="muted session-date">{formatDate(data.session.startedAt)}</p>
+  {/if}
   <TaperedRule />
   <p class="muted status">Status: {data.session.status}</p>
 
@@ -50,6 +56,9 @@
 </div>
 
 <style>
+  .session-date {
+    margin-top: -0.5rem;
+  }
   .status {
     margin-top: -0.5rem;
   }

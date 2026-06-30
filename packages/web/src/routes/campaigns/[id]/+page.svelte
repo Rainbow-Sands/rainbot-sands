@@ -50,7 +50,10 @@
       {#each data.campaign.sessions as session (session.id)}
         <li>
           <a href="/campaigns/{data.campaign.id}/sessions/{session.id}">
-            {formatDate(session.startedAt)}
+            <span class="session-title">{session.title ?? formatDate(session.startedAt)}</span>
+            {#if session.title}
+              <span class="session-date">{formatDate(session.startedAt)}</span>
+            {/if}
           </a>
           <span class="status status-{session.status}">{session.status}</span>
         </li>
@@ -95,6 +98,14 @@
   }
   .sessions a {
     font-family: var(--font-display);
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .session-date {
+    font-family: var(--font-body, inherit);
+    font-size: 0.78rem;
+    color: var(--ink-soft);
   }
   .status {
     font-family: var(--font-display);
