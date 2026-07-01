@@ -1,3 +1,4 @@
+import { and, eq } from "drizzle-orm";
 import { db } from "./client.ts";
 import { guilds, users, campaigns, campaignMembers } from "./schema.ts";
 
@@ -11,7 +12,6 @@ export interface CreateCampaignInput {
   guildName: string;
   name: string;
   dm: DiscordUser;
-  players: DiscordUser[];
 }
 
 export async function createCampaign(
@@ -26,36 +26,78 @@ export async function createCampaign(
         set: { name: input.guildName, updatedAt: new Date() },
       });
 
-    // Dedupe members; the DM takes precedence if also listed as a player.
-    const members = new Map<string, { user: DiscordUser; role: "dm" | "player" }>();
-    for (const player of input.players) {
-      members.set(player.id, { user: player, role: "player" });
-    }
-    members.set(input.dm.id, { user: input.dm, role: "dm" });
-
-    for (const { user } of members.values()) {
-      await tx
-        .insert(users)
-        .values({ id: user.id, username: user.username })
-        .onConflictDoUpdate({
-          target: users.id,
-          set: { username: user.username, updatedAt: new Date() },
-        });
-    }
+    await tx
+      .insert(users)
+      .values({ id: input.dm.id, username: input.dm.username })
+      .onConflictDoUpdate({
+        target: users.id,
+        set: { username: input.dm.username, updatedAt: new Date() },
+      });
 
     const [campaign] = await tx
       .insert(campaigns)
       .values({ guildId: input.guildId, name: input.name })
       .returning({ id: campaigns.id });
 
-    await tx.insert(campaignMembers).values(
-      [...members.values()].map(({ user, role }) => ({
-        campaignId: campaign.id,
-        userId: user.id,
-        role,
-      }))
-    );
+    await tx.insert(campaignMembers).values({
+      campaignId: campaign.id,
+      userId: input.dm.id,
+      role: "dm",
+    });
 
     return campaign;
   });
+}
+
+export interface AddCampaignMemberInput {
+  campaignId: string;
+  user: DiscordUser;
+  characterName: string;
+}
+
+// Adds (or re-adds) a player to a campaign. Re-running updates their character.
+export async function addCampaignMember(
+  input: AddCampaignMemberInput
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(users)
+      .values({ id: input.user.id, username: input.user.username })
+      .onConflictDoUpdate({
+        target: users.id,
+        set: { username: input.user.username, updatedAt: new Date() },
+      });
+
+    await tx
+      .insert(campaignMembers)
+      .values({
+        campaignId: input.campaignId,
+        userId: input.user.id,
+        role: "player",
+        characterName: input.characterName,
+      })
+      .onConflictDoUpdate({
+        target: [campaignMembers.campaignId, campaignMembers.userId],
+        set: { role: "player", characterName: input.characterName },
+      });
+  });
+}
+
+// Removes a player from a campaign. Scoped to role 'player' so the DM, who owns
+// the campaign, can never be removed by this command.
+export async function removeCampaignMember(
+  campaignId: string,
+  userId: string
+): Promise<boolean> {
+  const removed = await db
+    .delete(campaignMembers)
+    .where(
+      and(
+        eq(campaignMembers.campaignId, campaignId),
+        eq(campaignMembers.userId, userId),
+        eq(campaignMembers.role, "player")
+      )
+    )
+    .returning({ userId: campaignMembers.userId });
+  return removed.length > 0;
 }

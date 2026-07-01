@@ -7,7 +7,8 @@
   },
   "scripts": {
     "dev": "node --env-file=../../.env --watch src/worker.ts",
-    "start": "node src/worker.ts"
+    "start": "node src/worker.ts",
+    "test:summarize": "node --env-file=../../.env src/scripts/test-summarize.ts"
   },
   "dependencies": {
     "@temporalio/activity": "^1.18.1",

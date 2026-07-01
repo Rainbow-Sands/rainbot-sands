@@ -32,7 +32,7 @@ export const campaigns = pgTable("campaigns", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// role: 'dm' | 'player'
+// role: 'dm' | 'player'. characterName is the player's character (null for the DM).
 export const campaignMembers = pgTable(
   "campaign_members",
   {
@@ -43,6 +43,7 @@ export const campaignMembers = pgTable(
       .references(() => users.id)
       .notNull(),
     role: varchar("role", { length: 10 }).notNull().default("player"),
+    characterName: text("character_name"),
   },
   (t) => [primaryKey({ columns: [t.campaignId, t.userId] })]
 );

@@ -24,6 +24,7 @@ function startActivation(
   sessionDir: string,
   segmentId: string,
   userId: string,
+  username: string,
   connection: ReturnType<typeof joinVoiceChannel>,
   onDone: (ref: SegmentRef) => void,
   activeUsers: Set<string>
@@ -62,7 +63,7 @@ function startActivation(
   ffmpegProcess.on("close", (code) => {
     activeUsers.delete(userId);
     if (code === 0) {
-      onDone({ segmentId, audioFile, timestamp, userId });
+      onDone({ segmentId, audioFile, timestamp, userId, username });
     }
   });
 }
@@ -143,7 +144,19 @@ export function attachRecordingSession(
 
   connection.receiver.speaking.on("start", (userId: string) => {
     const segId = String(segmentCounter++).padStart(4, "0");
-    startActivation(sessionDir, segId, userId, connection, onSegmentDone, activeUsers);
+    // Resolve a readable label for the transcript. Use the account username so it
+    // matches the username stored for campaign members; fall back to the id.
+    const username =
+      voiceChannel.guild.members.cache.get(userId)?.user.username ?? userId;
+    startActivation(
+      sessionDir,
+      segId,
+      userId,
+      username,
+      connection,
+      onSegmentDone,
+      activeUsers
+    );
     const session = getActiveSession(guildId);
     if (session) session.segmentCount = segmentCounter;
   });

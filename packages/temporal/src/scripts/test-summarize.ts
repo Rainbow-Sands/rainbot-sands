@@ -1,0 +1,113 @@
+// Standalone harness to exercise the summarization pipeline against a
+// transcript.txt, independent of Discord/Temporal. Runs the exact same prompts
+// and post-processing as the real activities (imported from ../prompts.ts and
+// ../text.ts), so what you see here is what the workflow would produce.
+//
+// Usage:
+//   LLAMA_URL=http://localhost:8080 node src/scripts/test-summarize.ts <transcript.txt>
+//   pnpm test:summarize <transcript.txt>          # loads LLAMA_URL from root .env
+//
+// Writes <transcript>.summary.md / .recap.md / .title.txt next to the input so
+// outputs persist for comparing prompts or models across runs.
+
+import { readFileSync, writeFileSync } from "node:fs";
+import { performance } from "node:perf_hooks";
+import { SUMMARIZE_SYSTEM, TITLE_SYSTEM, RECAP_SYSTEM } from "../prompts.ts";
+import { stripCodeFence, normalizeTitle } from "../text.ts";
+
+const LLAMA_URL = process.env.LLAMA_URL;
+if (!LLAMA_URL) {
+  console.error("Missing required environment variable: LLAMA_URL");
+  process.exit(1);
+}
+
+const transcriptPath = process.argv[2];
+if (!transcriptPath) {
+  console.error("Usage: node src/scripts/test-summarize.ts <transcript.txt>");
+  process.exit(1);
+}
+
+interface Completion {
+  content: string;
+  model?: string;
+  promptTokens?: number;
+  completionTokens?: number;
+}
+
+async function complete(system: string, user: string): Promise<Completion> {
+  const res = await fetch(`${LLAMA_URL}/v1/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      temperature: 0.7,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`llama-server returned ${res.status}: ${await res.text()}`);
+  }
+
+  const data = (await res.json()) as {
+    model?: string;
+    choices: { message: { content: string } }[];
+    usage?: { prompt_tokens?: number; completion_tokens?: number };
+  };
+
+  return {
+    content: stripCodeFence((data.choices[0]?.message.content ?? "").trim()),
+    model: data.model,
+    promptTokens: data.usage?.prompt_tokens,
+    completionTokens: data.usage?.completion_tokens,
+  };
+}
+
+// Run one stage, printing timing/token/throughput stats alongside the output.
+async function stage(label: string, system: string, input: string): Promise<Completion> {
+  process.stdout.write(`\n→ ${label}… (${input.length.toLocaleString()} chars in)\n`);
+  const start = performance.now();
+  const result = await complete(system, input);
+  const secs = (performance.now() - start) / 1000;
+
+  const stats = [`${secs.toFixed(1)}s`];
+  if (result.model) stats.push(result.model);
+  if (result.promptTokens) stats.push(`${result.promptTokens} prompt tok`);
+  if (result.completionTokens) {
+    stats.push(`${result.completionTokens} out tok`);
+    stats.push(`${(result.completionTokens / secs).toFixed(1)} tok/s`);
+  }
+
+  console.log(`${"═".repeat(70)}`);
+  console.log(`${label.toUpperCase()}  (${stats.join(" · ")})`);
+  console.log("═".repeat(70));
+  console.log(result.content);
+  return result;
+}
+
+try {
+  const transcript = readFileSync(transcriptPath, "utf8");
+  const base = transcriptPath.replace(/\.txt$/, "");
+
+  const overall = performance.now();
+
+  const summary = await stage("Summary", SUMMARIZE_SYSTEM, transcript);
+  writeFileSync(`${base}.summary.md`, summary.content, "utf8");
+
+  const recap = await stage("Recap", RECAP_SYSTEM, summary.content);
+  writeFileSync(`${base}.recap.md`, recap.content, "utf8");
+
+  const titleResult = await stage("Title", TITLE_SYSTEM, summary.content);
+  const title = normalizeTitle(titleResult.content);
+  writeFileSync(`${base}.title.txt`, title, "utf8");
+
+  console.log(
+    `\nDone in ${((performance.now() - overall) / 1000).toFixed(1)}s. ` +
+      `Wrote ${base}.summary.md, ${base}.recap.md, ${base}.title.txt`,
+  );
+} catch (err) {
+  console.error(`\nFailed: ${err instanceof Error ? err.message : String(err)}`);
+  process.exit(1);
+}

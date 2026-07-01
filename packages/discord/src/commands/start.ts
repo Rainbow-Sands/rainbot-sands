@@ -1,6 +1,5 @@
 import {
   SlashCommandBuilder,
-  type AutocompleteInteraction,
   type ChatInputCommandInteraction,
   type VoiceBasedChannel,
 } from "discord.js";
@@ -8,6 +7,7 @@ import { getTemporalClient, sessionWorkflow } from "@rainbot/temporal";
 import { getCampaignsForGuild } from "@rainbot/db";
 import { getActiveSession } from "../recording.ts";
 import { attachRecordingSession } from "../session.ts";
+import { campaignAutocomplete } from "./autocomplete.ts";
 import { MEDIA_PATH } from "../env.ts";
 import type { SessionInput } from "@rainbot/temporal";
 import path from "path";
@@ -23,20 +23,7 @@ export const start = {
         .setRequired(true)
         .setAutocomplete(true)
     ),
-  autocomplete: async (interaction: AutocompleteInteraction) => {
-    if (!interaction.guildId) {
-      await interaction.respond([]);
-      return;
-    }
-    const focused = interaction.options.getFocused().toLowerCase();
-    const campaigns = await getCampaignsForGuild(interaction.guildId);
-    await interaction.respond(
-      campaigns
-        .filter((c) => c.name.toLowerCase().includes(focused))
-        .slice(0, 25)
-        .map((c) => ({ name: c.name, value: c.id }))
-    );
-  },
+  autocomplete: campaignAutocomplete,
   handler: async (interaction: ChatInputCommandInteraction) => {
     if (!interaction.guildId) {
       await interaction.reply("This command can only be used in a server.");

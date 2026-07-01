@@ -49,6 +49,66 @@ export interface CampaignMember {
   id: string;
   username: string;
   role: string;
+  characterName: string | null;
+}
+
+// Lightweight lookup for command authorization: which guild owns the campaign
+// and who is its DM. Returns null if the campaign does not exist.
+export async function getCampaignMeta(
+  campaignId: string
+): Promise<{ guildId: string; dmId: string | null } | null> {
+  const [campaign] = await db
+    .select({ guildId: campaigns.guildId })
+    .from(campaigns)
+    .where(eq(campaigns.id, campaignId))
+    .limit(1);
+  if (!campaign) return null;
+
+  const [dm] = await db
+    .select({ userId: campaignMembers.userId })
+    .from(campaignMembers)
+    .where(
+      and(
+        eq(campaignMembers.campaignId, campaignId),
+        eq(campaignMembers.role, "dm")
+      )
+    )
+    .limit(1);
+
+  return { guildId: campaign.guildId, dmId: dm?.userId ?? null };
+}
+
+export interface CampaignCastMember {
+  userId: string;
+  username: string;
+  characterName: string;
+}
+
+// The players of a campaign that have a character assigned, for building the
+// transcript's cast legend. Keyed by userId so callers can align it with the
+// speaker labels used in the transcript body.
+export async function getCampaignCast(
+  campaignId: string
+): Promise<CampaignCastMember[]> {
+  const rows = await db
+    .select({
+      userId: users.id,
+      username: users.username,
+      characterName: campaignMembers.characterName,
+    })
+    .from(campaignMembers)
+    .innerJoin(users, eq(campaignMembers.userId, users.id))
+    .where(
+      and(
+        eq(campaignMembers.campaignId, campaignId),
+        eq(campaignMembers.role, "player")
+      )
+    )
+    .orderBy(users.username);
+
+  return rows.filter(
+    (r): r is CampaignCastMember => r.characterName !== null
+  );
 }
 
 export interface CampaignSessionSummary {
@@ -82,6 +142,7 @@ export async function getCampaignDetail(
       id: users.id,
       username: users.username,
       role: campaignMembers.role,
+      characterName: campaignMembers.characterName,
     })
     .from(campaignMembers)
     .innerJoin(users, eq(campaignMembers.userId, users.id))

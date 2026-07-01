@@ -9,9 +9,17 @@ import {
 import { start } from "./commands/start.ts";
 import { stop } from "./commands/stop.ts";
 import { campaign } from "./commands/campaign.ts";
+import { addPlayer } from "./commands/add-player.ts";
+import { removePlayer } from "./commands/remove-player.ts";
 import { DISCORD_TOKEN, DISCORD_APPLICATION_ID } from "./env.ts";
 
-const commands = { start, stop, campaign };
+const commands = {
+  start,
+  stop,
+  campaign,
+  "add-player": addPlayer,
+  "remove-player": removePlayer,
+};
 
 export const registerCommands = async () => {
   console.log("Registering commands.");

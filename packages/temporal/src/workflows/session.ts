@@ -151,7 +151,11 @@ export async function sessionWorkflow(
 
   try {
     // Post-session pipeline.
-    const transcriptKey = await aggregateTranscript(input.sessionDir, allKeys);
+    const transcriptKey = await aggregateTranscript(
+      input.sessionDir,
+      allKeys,
+      input.campaignId,
+    );
     await persistTranscript(input.sessionDir, input.sessionId, transcriptKey);
 
     phase = "summarizing";

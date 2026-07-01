@@ -3,6 +3,9 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import path from "path";
 import type { SegmentRef } from "../types.ts";
 import { WHISPER_URL, LLAMA_URL } from "../env.ts";
+import { SUMMARIZE_SYSTEM, TITLE_SYSTEM, RECAP_SYSTEM } from "../prompts.ts";
+import { stripCodeFence, normalizeTitle } from "../text.ts";
+import { getCampaignCast } from "@rainbot/db";
 
 interface WhisperResponse {
   text: string;
@@ -12,6 +15,7 @@ interface WhisperResponse {
 interface TranscriptFragment {
   timestamp: string;
   userId: string;
+  username?: string;
   text: string;
 }
 
@@ -81,6 +85,7 @@ export async function transcribeSegment(
     const fragment: TranscriptFragment = {
       timestamp: ref.timestamp,
       userId: ref.userId,
+      username: ref.username,
       text,
     };
 
@@ -100,6 +105,7 @@ export async function transcribeSegment(
 export async function aggregateTranscript(
   sessionDir: string,
   keys: string[],
+  campaignId: string,
 ): Promise<string> {
   const fragments: TranscriptFragment[] = keys
     .map((key) => {
@@ -110,30 +116,66 @@ export async function aggregateTranscript(
     .filter((f): f is TranscriptFragment => f !== null)
     .toSorted((a, b) => a.timestamp.localeCompare(b.timestamp));
 
-  const content =
-    fragments
-      .map(({ timestamp, userId, text }) => {
-        const time = new Date(timestamp).toLocaleTimeString("en-CA", {
-          hour12: false,
-        });
-        return `[${time}] ${userId}: ${text}`;
-      })
-      .join("\n") + "\n";
+  // Wall-clock timing isn't relevant to summarization, so we drop it. Consecutive
+  // lines from the same speaker are merged onto one labelled line to avoid
+  // repeating the speaker on every utterance.
+  const lines: string[] = [];
+  let speaker: string | null = null;
+  let buffer: string[] = [];
+  // Track the label actually used per speaker so the cast legend below can reuse
+  // the same name (the body uses displayName, which may differ from the account).
+  const labelByUserId = new Map<string, string>();
+
+  const flush = () => {
+    if (speaker !== null && buffer.length > 0) {
+      lines.push(`${speaker}: ${buffer.join(" ")}`);
+    }
+  };
+
+  for (const fragment of fragments) {
+    const text = fragment.text.trim();
+    if (!text) continue;
+    const name = fragment.username ?? fragment.userId;
+    if (!labelByUserId.has(fragment.userId)) {
+      labelByUserId.set(fragment.userId, name);
+    }
+    if (name !== speaker) {
+      flush();
+      speaker = name;
+      buffer = [text];
+    } else {
+      buffer.push(text);
+    }
+  }
+  flush();
+
+  const legend = await buildCastLegend(campaignId, labelByUserId);
+  const content = legend + lines.join("\n") + "\n";
 
   const outPath = path.join(sessionDir, "transcript.txt");
   writeFileSync(outPath, content, "utf8");
   return "transcript.txt";
 }
 
-// ── Post-session pipeline ─────────────────────────────────────────────────────
+// Prepends a "who plays whom" cast list so the model can attribute dialogue to
+// characters. Each player is labelled with the same name used in the transcript
+// body (falling back to their account username if they never spoke).
+async function buildCastLegend(
+  campaignId: string,
+  labelByUserId: Map<string, string>,
+): Promise<string> {
+  const cast = await getCampaignCast(campaignId);
+  if (cast.length === 0) return "";
 
-// Models often wrap a markdown response in a ```markdown … ``` fence despite
-// being asked for raw markdown. Unwrap it, but only when the whole response is a
-// single fenced block, so genuine internal code blocks are left untouched.
-function stripCodeFence(text: string): string {
-  const match = /^```[^\n]*\n([\s\S]*?)\n?```$/.exec(text.trim());
-  return match ? match[1].trim() : text;
+  const entries = cast.map((member) => {
+    const label = labelByUserId.get(member.userId) ?? member.username;
+    return `- ${label} plays ${member.characterName}`;
+  });
+
+  return `Cast — the players and the characters they play:\n${entries.join("\n")}\n\nTranscript:\n`;
 }
+
+// ── Post-session pipeline ─────────────────────────────────────────────────────
 
 async function llamaComplete(prompt: string, system: string): Promise<string> {
   const llamaUrl = LLAMA_URL;
@@ -179,18 +221,7 @@ export async function summarize(
 ): Promise<string> {
   const transcript = readFileSync(path.join(sessionDir, transcriptKey), "utf8");
 
-  const text = await llamaComplete(
-    transcript,
-    `I am going to give you a full transcript of a DnD game. Your goal is to create a summary of the game that only includes the in-world elements.
-This means you remove all meta commentary, out of character conversations and fluff.
-Your final summary should be a beautifully formatted markdown document of everything that happened in the game.
-For flair - include markdown quotes from characters for funny or impactful moments but ensure they are relevant to the section in question.
-Ensure you include all the details of the game, including all the characters and their actions.
-
-To reiterate - ensure your summary is extremely long and covers every action exhaustively.
-Speak in third person: "The party entered..." etc.
-You only respond with the markdown text of the summary: do not respond with anything else.`,
-  );
+  const text = await llamaComplete(transcript, SUMMARIZE_SYSTEM);
 
   const outPath = path.join(sessionDir, "summary.txt");
   writeFileSync(outPath, text, "utf8");
@@ -203,19 +234,8 @@ export async function generateTitle(
 ): Promise<string> {
   const summary = readFileSync(path.join(sessionDir, summaryKey), "utf8");
 
-  const text = await llamaComplete(
-    summary,
-    `I am going to give you a summary of a DnD session. Your goal is to write a short, evocative title for the session — the kind of name a chapter in a fantasy novel might have.
-The title should capture the most memorable moment or theme of the session.
-Keep it under 10 words. Use title case. Do not use quotation marks, markdown, or any prefix like "Title:".
-You only respond with the title text, nothing else.`,
-  );
-
-  // Models sometimes wrap the title in quotes despite instructions.
-  const title = text
-    .trim()
-    .replace(/^["'`]+|["'`]+$/g, "")
-    .trim();
+  const text = await llamaComplete(summary, TITLE_SYSTEM);
+  const title = normalizeTitle(text);
 
   const outPath = path.join(sessionDir, "title.txt");
   writeFileSync(outPath, title, "utf8");
@@ -228,16 +248,7 @@ export async function recap(
 ): Promise<string> {
   const summary = readFileSync(path.join(sessionDir, summaryKey), "utf8");
 
-  const text = await llamaComplete(
-    summary,
-    `I am going to give you a summary of a DnD session. Your goal is to shorten it to just a few paragraphs of the most important parts creating a short 'recap' of the game.
-This recap will be used at the next session to help the players remember what happened.
-Your recap should be in markdown format with nice headers and use of bold.
-
-You only respond with the markdown text of the recap, do not add "Here is the recap" or anything else.
-If the summary has a title, preserve it.
-Speak in third person: "The party entered..." etc.`,
-  );
+  const text = await llamaComplete(summary, RECAP_SYSTEM);
 
   const outPath = path.join(sessionDir, "recap.txt");
   writeFileSync(outPath, text, "utf8");
